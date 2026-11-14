@@ -76,7 +76,8 @@ window.I18N = {
     e_network: 'Problém se spojením.', e_kicked: 'Byl jsi vyhozen ze hry.', e_generic: 'Něco se pokazilo.',
     reconnecting: 'Obnovuji spojení…', copied: 'Odkaz zkopírován', copyLink: 'Kopírovat odkaz',
     credits: 'Fanouškovská adaptace hry Secret Hitler (Mike Boxleiter, Tommy Maranges, Mac Schubert), licence CC BY-NC-SA 4.0. Nekomerční.',
-    rulesShort: 'Pravidla', confirmLeave: 'Opravdu opustit hru?'
+    rulesShort: 'Pravidla', confirmLeave: 'Opravdu opustit hru?', exit: 'Odejít',
+    confirmCloseRoom: 'Zavřít tuto hru? Všichni hráči budou odpojeni.', confirmExitGame: 'Opustit rozehranou hru? Na tomto zařízení se do ní už nevrátíš.', e_roomClosed: 'Hra byla zavřena.'
   },
   en: {
     tagline: 'The year is 1932. The Weimar Republic trembles. There are fascists among you — and one of them is Secret Hitler.',
@@ -148,6 +149,7 @@ window.I18N = {
     e_network: 'Connection problem.', e_kicked: 'You were kicked from the game.', e_generic: 'Something went wrong.',
     reconnecting: 'Reconnecting…', copied: 'Link copied', copyLink: 'Copy link',
     credits: 'Fan adaptation of Secret Hitler (Mike Boxleiter, Tommy Maranges, Mac Schubert), licensed CC BY-NC-SA 4.0. Non-commercial.',
-    rulesShort: 'Rules', confirmLeave: 'Really leave the game?'
+    rulesShort: 'Rules', confirmLeave: 'Really leave the game?', exit: 'Leave',
+    confirmCloseRoom: 'Close this game? All players will be disconnected.', confirmExitGame: 'Leave the running game? You will not be able to return on this device.', e_roomClosed: 'The game was closed.'
   }
 };

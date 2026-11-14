@@ -363,3 +363,5 @@ h1, h2, h3 { font-family: var(--head); text-transform: uppercase; letter-spacing
 .board-screen .seat { min-height: 76px; }
 .slot .tile .lbl { display: none; }
 .board-screen .slot .tile .lbl { display: block; font-size: 12px; }
+
+.exit-btn { background: var(--red); color: var(--paper); border: 1px solid var(--paper3); padding: 3px 9px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }

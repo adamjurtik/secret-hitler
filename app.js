@@ -70,7 +70,7 @@
     es = new EventSource(`/api/stream?code=${encodeURIComponent(session.code)}&token=${encodeURIComponent(session.token)}`);
     es.onmessage = (e) => {
       const d = JSON.parse(e.data);
-      if (d.closed) { endSession(d.closed === 'kicked' ? t('e_kicked') : null); return; }
+      if (d.closed) { endSession(d.closed === 'kicked' ? t('e_kicked') : d.closed === 'roomClosed' ? t('e_roomClosed') : null); return; }
       setConn(false); onView(d);
     };
     es.onerror = async () => {
@@ -457,6 +457,7 @@
     document.documentElement.lang = lang;
     document.querySelectorAll('.lang button').forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
     const chip = $('#codeChip'); chip.hidden = !(V && session); if (V) chip.textContent = V.code;
+    const ex = $('#exitBtn'); ex.hidden = !session; ex.textContent = t('exit');
     $('#conn').textContent = t('reconnecting');
     // preserve inputs
     const active = document.activeElement && document.activeElement.id;
@@ -484,6 +485,16 @@
   document.querySelector('.lang').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;
     lang = b.dataset.lang; localStorage.setItem('sh_lang', lang); render();
+  });
+  $('#exitBtn').addEventListener('click', async () => {
+    if (!session) return;
+    const lobby = !V || V.status === 'lobby';
+    const hostBoard = V && V.isBoard && V.isHost;
+    const msg = hostBoard ? t('confirmCloseRoom') : lobby ? t('confirmLeave') : t('confirmExitGame');
+    if (!confirm(msg)) return;
+    if (V && hostBoard) await act('closeRoom');
+    else if (V && lobby && V.me) await act('leave');
+    endSession();
   });
   $('#brand').addEventListener('click', (e) => { e.preventDefault(); if (!session) { screen = 'home'; ui.error = ''; render(); } });
 

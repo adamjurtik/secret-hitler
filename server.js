@@ -223,6 +223,12 @@ function act(room, actor, a) {
     sysChat(room, 'sysLeft', { name: me.name });
     return;
   }
+  if (type === 'closeRoom') {
+    if (!host) fail('hostOnly');
+    for (const tok of [...room.clients.keys()]) closeClients(room, tok, 'roomClosed');
+    rooms.delete(room.code);
+    return;
+  }
   if (type === 'newGame') {
     if (!host) fail('hostOnly');
     if (room.status !== 'ended') fail('notAllowed');
