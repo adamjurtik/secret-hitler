@@ -11,7 +11,8 @@ const path = require('path');
 const crypto = require('crypto');
 
 const PORT = process.env.PORT || 3000;
-const PUBLIC = path.join(__dirname, 'public');
+// Works both with files in ./public and with all files flattened next to server.js
+const PUBLIC = fs.existsSync(path.join(__dirname, 'public', 'index.html')) ? path.join(__dirname, 'public') : __dirname;
 const ROOM_TTL = 6 * 60 * 60 * 1000;
 const rooms = new Map();
 
