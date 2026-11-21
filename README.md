@@ -1,54 +1,69 @@
-# Secret Hitler – online (CZ/EN)
+# Secret Hitler Online XL (CZ/EN)
 
-Webová aplikace pro hraní Secret Hitler na více zařízeních. Hraje 5–10 hráčů.
+Fan-made online adaptation of Secret Hitler with selected XL rules and the agreed Monarchist/Dictator home variant. The application supports 5–20 players and two play modes:
 
-**Dva režimy:**
-1. **Každý na svém zařízení:** každý hráč vidí na svém telefonu celý hrací plán, své akce, historii a chat. Dá se hrát i na dálku.
-2. **Společná obrazovka:** hrací plán, historie, chat a dramatická oznámení (hlasování, zákony, popravy) běží na televizi nebo notebooku, který nepatří žádnému hráči. Telefony slouží jen k tajným akcím a k chatu.
+1. **Personal devices:** each player uses their own phone/computer.
+2. **Shared board:** a TV/laptop displays the board while players use their phones for secret actions.
 
-Připojení probíhá kódem ze 4 písmen nebo naskenováním QR kódu fotoaparátem telefonu.
+The server owns all game state and secret information. Clients receive only the information their player is allowed to see. There is no private Communist chat.
 
-## Spuštění
+## Run locally
 
-Potřebuješ jen **Node.js 18+**. Projekt nemá žádné závislosti (není potřeba `npm install`).
+Requires Node.js 18 or newer. There are no external npm dependencies.
 
 ```bash
-node server.js
-# běží na http://localhost:3000 (port nastavíš proměnnou PORT)
+npm start
 ```
 
-Pro hraní v jedné Wi‑Fi síti stačí spustit server na počítači a ostatní otevřou `http://<IP-počítače>:3000`.
+Open `http://localhost:3000`. Set another port with `PORT=xxxx`.
 
-## Nasazení na internet zdarma (např. Render.com)
+## Deploy to Render
 
-1. Nahraj složku do repozitáře na GitHubu.
-2. Na render.com zvol *New → Web Service* a vyber repozitář.
-3. Jako Build command nech prázdné (nebo `npm install`), jako Start command zadej `node server.js`.
-4. Hotovo. QR kód v čekárně automaticky ukazuje adresu nasazené aplikace.
+1. Push the contents of this directory to a GitHub repository.
+2. In Render, choose **New → Web Service** and connect the repository.
+3. Use **Build command:** `npm install` (or leave empty; there are no dependencies).
+4. Use **Start command:** `npm start`.
+5. Deploy. Render supplies `PORT` automatically.
 
-Funguje to i na Railway, Fly.io nebo na vlastním VPS. Na bezplatném Renderu server po 15 minutách nečinnosti usne a první načtení pak trvá asi 30 s.
-Hry se drží v paměti serveru, takže restart serveru rozehrané hry smaže. Neaktivní místnosti se samy mažou po 6 hodinách.
+Rooms are held in memory; a server restart clears active rooms. Do not use this build for paid/commercial play. The underlying game is licensed CC BY-NC-SA 4.0; this fan adaptation retains that non-commercial share-alike intent.
 
-## Co aplikace umí
+## Game configuration
 
-- Všechna pravidla: role podle počtu hráčů, Hitler zná fašisty jen v 5–6 hráčích, omezení volitelnosti (včetně výjimky pro 5 živých hráčů), volební ukazatel a chaos, prezidentské pravomoci podle počtu hráčů (prověření, náhled, mimořádné volby, poprava), veto po 5 fašistických zákonech, výhra zvolením Hitlera po 3 fašistických zákonech.
-- **Tajné informace zná jen server.** Každé zařízení dostane jen to, co smí vidět (role, karty v ruce, výsledky prověření).
-- Role se zobrazí až po klepnutí na „obálku“, aby nikdo nenakoukl.
-- Historie vlád, hlasování (kdo jak hlasoval) a nepovinná tvrzení prezidenta a kancléře o tom, jaké karty dostali.
-- Textový chat (popravení hráči nesmí psát).
-- Návrat po odpojení: po obnovení stránky nebo výpadku sítě se hráč vrátí na své místo.
-- Zakladatel (v režimu se společnou obrazovkou je to ta obrazovka) spouští hru, vyhazuje hráče z čekárny a může spustit novou hru se stejnými hráči.
-- Přepínač čeština / angličtina.
+- 5–20 players.
+- The host alone toggles expansions and edits role counts. Other players can see the settings but cannot change them.
+- Before roles are dealt, everyone sees a mandatory summary of active expansions and the role distribution.
+- Role counts must add up exactly to the number of players. There is always exactly one Hitler; unique special roles (Capitalist, Anarchist, Monarchist) can be set to 0 or 1.
+- The host may edit the suggested distribution. For Communist games, the PDF table is used for 6–16 players. The suggested 17–20 distributions are experimental and are not official XL rules.
 
-## Struktura
+## Implemented mechanics
 
-- `server.js` – HTTP server, místnosti, herní engine, realtime přes Server-Sent Events
-- `public/index.html`, `style.css`, `app.js` – klient
-- `public/i18n.js` – texty CZ/EN
-- `public/qr.js` – generátor QR kódů (vlastní, bez knihoven)
+- Base Liberal/Fascist/Hitler game and the normal election, policy, veto, investigation, special election and execution flow.
+- Communist party, Communist policy deck and 6–8 / 9–10 / 11+ Communist tracker power sequences.
+- Bugging, Radicalisation, Five-year Plan, Congress and Confession.
+- Capitalist, including its victory condition and the additional Communist policy after its execution.
+- Anarchist without Communists and Anarchist with Communists, including the separate Anarchist policy handling and win conditions.
+- Anti-Communist, Anti-Fascist and Social Democratic policies.
+- Article 48 and Enabling Act emergency powers.
+- Longer Liberal tracker for larger rooms.
+- The agreed home variant: secret Monarchist; Hitler's execution reveals the Monarchist as Dictator, adds one Liberal policy step and removes Rote Kapelle from the game; executing the Dictator gives the joint Liberal/Communist/Anarchist victory when those factions are present.
+- Rote Kapelle: created when an ordinary Fascist is converted while both Communists and Monarchist are enabled; knows ordinary Fascists but not the Monarchist; does not attend the next Congress; leaves the game after Hitler is executed.
 
-## Licence
+## Testing
 
-Fanouškovská adaptace hry **Secret Hitler** od Mika Boxleitera, Tommyho Marangese a Maca Schuberta (https://www.secrethitler.com).
-Původní hra má licenci **CC BY-NC-SA 4.0** a tato adaptace je vydána pod stejnou licencí. Je určena jen k nekomerčnímu použití.
-Změny oproti originálu: převedení do digitální podoby pro více zařízení, vlastní grafika a ikony, doplněná historie, chat a nepovinná tvrzení o kartách.
+```bash
+npm test
+npm run simulate:base
+npm run simulate:xl
+npm run simulate:xl:stress
+```
+
+`npm test` runs deterministic rule/permission/privacy checks plus 1,280 extension-combination/player-count setup cases. `simulate:base` runs 1,000 random-agent base games. `simulate:xl` runs 1,400 random-agent games with all XL expansion switches enabled across 5–20 players. Some optional one-off roles are omitted at 5–6 players because there are not enough seats. `simulate:xl:stress` runs 10,000 such games across 5–20 players (625 per player count). The simulations are stress tests of the implemented rules, not proof of competitive balance: random agents do not play strategically and the 17–20 role ratios are experimental.
+
+## Important rule decisions still requiring confirmation
+
+Two details are not fully specified by the source PDF and are currently implemented as explicit working assumptions:
+
+1. Emergency power cards are drawn after the President discards a policy and before the Chancellor chooses between the remaining two cards. This timing is necessary for Vote of No Confidence to operate on the President's discarded card.
+2. The PDF's Radicalisation procedure explicitly protects Hitler and the Capitalist, but does not list the Monarchist. The implementation therefore allows the Monarchist to be converted: the player keeps the Monarchist role, changes party membership to Communist, and does not become Rote Kapelle. If the Monarchist later succeeds Hitler, the agreed Dictator succession changes the party back to Fascist. This is an explicit implementation interpretation, not a rule stated by the PDF.
+
+The original rule PDFs are in `docs/` for reference.

@@ -158,8 +158,10 @@ h1, h2, h3 { font-family: var(--head); text-transform: uppercase; letter-spacing
 .track-head h3 { font-size: 15px; letter-spacing: .2em; }
 .track-head span { font-family: var(--type); font-size: 12px; }
 .slots { display: grid; gap: 6px; }
-.track.lib .slots { grid-template-columns: repeat(5, 1fr); }
+.track.lib .slots { grid-template-columns: repeat(var(--track-length, 5), minmax(0, 1fr)); }
 .track.fas .slots { grid-template-columns: repeat(6, 1fr); }
+.track.comm { background: linear-gradient(#9bb49c, #63846a); }
+.track.comm .slots { grid-template-columns: repeat(var(--track-length, 6), minmax(0, 1fr)); }
 .slot {
   aspect-ratio: 5 / 7; border: 2px dashed rgba(29,26,23,.55); background: rgba(243,233,210,.35); position: relative;
   display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 3px; gap: 3px;
@@ -189,6 +191,9 @@ h1, h2, h3 { font-family: var(--head); text-transform: uppercase; letter-spacing
 .tile::before { content: ''; position: absolute; inset: 4px; border: 1.5px solid rgba(243,233,210,.7); }
 .tile.L { background: var(--blue); }
 .tile.F { background: var(--red); }
+.tile.C, .tile.A, .tile.AF { background: #47765b; }
+.tile.AC { background: #a64a37; }
+.tile.SD { background: #557f9d; }
 .tile svg { width: 52%; height: auto; }
 .tile .lbl { font-size: .9em; }
 .tile.flip { animation: flip .7s ease both; }
@@ -365,3 +370,8 @@ h1, h2, h3 { font-family: var(--head); text-transform: uppercase; letter-spacing
 .board-screen .slot .tile .lbl { display: block; font-size: 12px; }
 
 .exit-btn { background: var(--red); color: var(--paper); border: 1px solid var(--paper3); padding: 3px 9px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+
+.role-config{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}.role-config label{display:grid;gap:5px;font-size:13px;color:var(--muted,#777)}.role-config input{width:100%;min-width:0;padding:9px;border:1px solid var(--line,#aaa);border-radius:5px;background:var(--paper,#fff);color:var(--ink,#222);font:inherit}@media(max-width:420px){.role-config{gap:6px}.role-config input{padding:7px}}
+
+/* XL expansion setup */
+.extension-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px;margin:10px 0 2px}.ext-option{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px}.ext-option input{accent-color:var(--blue);width:16px;height:16px}.role-config{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:9px;margin:10px 0}.role-config label{display:flex;flex-direction:column;gap:5px}.role-config input{width:100%;min-width:0}
