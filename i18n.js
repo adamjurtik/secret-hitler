@@ -10,20 +10,28 @@ window.I18N = {
     yourName: 'Tvoje jméno', namePh: 'např. Adam', createGame: 'Založit', roomCode: 'Kód hry', joinGame: 'Vstoupit',
     joinHint: 'Kód najdeš na obrazovce zakladatele.', lobby: 'Čekárna', scanToJoin: 'Naskenuj a připoj se',
     orEnterCode: 'nebo zadej kód na', players: 'Hráči', waitingHost: 'Čeká se, až zakladatel spustí hru…',
-    start: 'Spustit hru', needPlayers: 'Potřeba 5–20 hráčů (teď {n})', leave: 'Opustit hru', kick: 'Vyhodit',
+    start: 'Spustit hru', needPlayers: 'Potřeba {min}–{max} hráčů (teď {n})', leave: 'Opustit hru', kick: 'Vyhodit',
     host: 'zakladatel', you: 'ty', offline: 'offline', boardScreen: 'Společná obrazovka',
     boardConnected: 'Obrazovka připojena', boardOffline: 'Společná obrazovka je offline',
     
-    // Roles
+    // Roles & Expansion goals/descriptions
     liberal: 'Liberál', fascist: 'Fašista', hitler: 'Hitler', grandma: 'Grandma', smuggler: 'Smuggler',
     komunista: 'Komunista', kitten: 'Kitten', monarchista: 'Monarchista', anarchista: 'Anarchista', kapitalista: 'Kapitalista',
     liberals: 'Liberálové', fascists: 'Fašisté',
     
+    desc_liberal: 'Cíl: Přijmout 5 liberálních zákonů nebo zabít Hitlera. Nemáš speciální schopnosti, věř svým instinktům.',
+    desc_fascist: 'Cíl: Přijmout 6 fašistických zákonů nebo zvolit Hitlera po 3. fašistickém zákoně. Znáš ostatní fašisty i Hitlera.',
+    desc_hitler: 'Cíl: Hraj jako liberál, získej důvěru a nech se zvolit kancléřem po 3. fašistickém zákoně.',
+    desc_grandma: 'Cíl: Fašistická příslušnost. Ostatní fašisté o tobě ví, ale ty o nich nevíš. Když tě někdo zkusí zabít, Grandma může vybrat někoho jiného!',
+    desc_smuggler: 'Cíl: Fašistická příslušnost. Zná ostatní fašisty.',
+    desc_komunista: 'Cíl: Přijmout 5 komunistických zákonů nebo zabít Hitlera. Komunisté o sobě navzájem ví.',
+    desc_kitten: 'Cíl: Liberální strana. Na začátku si prohlédne karty členství 3 hráčů. Když si někdo tipe, kdo je Kitten, při špatném tipu dotyčný umře!',
+    desc_monarchista: 'Cíl: Po smrti Hitlera se stává Diktátorem a fašistický tým vyhrává po splnění podmínek.',
+    desc_anarchista: 'Cíl: Vyhrává, pokud je zaplněn komunistický plán a jsou zrodeny aspoň 2 anarchistické zákony.',
+    desc_kapitalista: 'Cíl: Vyhrává, když nezvítězí ani komunisti, ani anarchista. Má fašistickou i liberální příslušnost a může si vybrat, kterou ukáže.',
+
     secretRole: 'Tajná role', partyMembership: 'Stranická příslušnost', partyL: 'Liberální strana', partyF: 'Fašistická strana', partyK: 'Komunistická strana', partyDual: 'Dual (Fašistická/Liberální)',
     myRole: 'Moje role', tapReveal: 'Klepni a zakryj obrazovku rukou', hide: 'Zakrýt', close: 'Zavřít',
-    goalLiberal: 'Přijměte 5 liberálních zákonů, nebo zastřelte Hitlera.',
-    goalFascist: 'Přijměte 6 fašistických zákonů, nebo po 3 fašistických zákonech zvolte Hitlera kancléřem.',
-    goalHitler: 'Hraj jako liberál a získej důvěru.',
     
     imReady: 'Mám přečteno', readyCount: 'Připraveno {r} / {n}', forceContinue: 'Pokračovat bez čekání',
     libTrack: 'Liberální zákony', fasTrack: 'Fašistické zákony', komTrack: 'Komunistické zákony',
@@ -59,7 +67,7 @@ window.I18N = {
     chooseExecute: 'Vyber hráče, kterého popravíš', peekTitle: 'Tři vrchní zákony v balíčku', done: 'Hotovo',
     investigateResult: '{name} je členem strany:', youCanLie: 'Výsledek můžeš sdělit — nebo zalhat.',
     waitFor: 'Čeká se na: {p}', deadInfo: 'Byl jsi popraven. Už nesmíš mluvit, hlasovat ani kandidovat.',
-    policyL: 'Liberální', policyF: 'Fašistický', policyK: 'Komunistický', policyA: 'Anarchistický',
+    policyL: 'Liberální', policyF: 'Fascistický', policyK: 'Komunistický', policyA: 'Anarchistický',
     
     claimTitle: 'Co tvrdíš, že jsi dostal?', claimPres: 'Tvrzení prezidenta', claimChanc: 'Tvrzení kancléře',
     myResults: 'Moje prověření',
@@ -68,7 +76,7 @@ window.I18N = {
     vetoRefusedEv: 'Prezident veto odmítl', investigatedEv: '{p} prověřil hráče {t}', specialEv: '{p} vyhlásil mimořádné volby: {t}',
     peekEv: '{p} nahlédl do balíčku',
     h_election: '{p} navrhl {c}', h_passed: 'zvolena', h_failed: 'odmítnuta', h_claims: 'tvrdí',
-    history: 'Historie', chat: 'Chat', chatPh: 'Napiš zprávu…', send: 'Odeslat', noHistory: 'Zatím se nic nestalo.',
+    history: 'Historie', chat: 'Chat', rulesShort: 'Pravidla', chatPh: 'Napiš zprávu…', send: 'Odeslat', noHistory: 'Zatím se nic nestalo.',
     sysJoined: '{name} se připojil', sysLeft: '{name} odešel', sysKicked: '{name} byl vyhozen', sysStart: 'Hra začíná ({n} hráčů)',
     
     winLiberal: 'Liberálové vítězí!', winFascist: 'Fašisté vítězí!', winKomunista: 'Komunisté vítězí!',
@@ -82,7 +90,7 @@ window.I18N = {
     e_network: 'Problém se spojením.', e_kicked: 'Byl jsi vyhozen ze hry.', e_generic: 'Něco se pokazilo.',
     reconnecting: 'Obnovuji spojení…', copied: 'Odkaz zkopírován', copyLink: 'Kopírovat odkaz',
     credits: 'Fanouškovská adaptace hry Secret Hitler (CC BY-NC-SA 4.0).',
-    rulesShort: 'Pravidla', confirmLeave: 'Opravdu opustit hru?', exit: 'Odejít',
+    confirmLeave: 'Opravdu opustit hru?', exit: 'Odejít',
     confirmCloseRoom: 'Zavřít tuto hru?', confirmExitGame: 'Opustit rozehranou hru?', e_roomClosed: 'Hra byla zavřena.'
   },
   en: {
@@ -96,7 +104,7 @@ window.I18N = {
     yourName: 'Your name', namePh: 'e.g. Adam', createGame: 'Create', roomCode: 'Game code', joinGame: 'Enter',
     joinHint: 'Find the code on the host screen.', lobby: 'Lobby', scanToJoin: 'Scan to join',
     orEnterCode: 'or enter the code at', players: 'Players', waitingHost: 'Waiting for the host to start…',
-    start: 'Start game', needPlayers: '5–20 players needed (now {n})', leave: 'Leave game', kick: 'Kick',
+    start: 'Start game', needPlayers: '{min}–{max} players needed (now {n})', leave: 'Leave game', kick: 'Kick',
     host: 'host', you: 'you', offline: 'offline', boardScreen: 'Shared screen',
     boardConnected: 'Screen connected', boardOffline: 'Shared screen is offline',
     
@@ -104,11 +112,19 @@ window.I18N = {
     komunista: 'Communist', kitten: 'Kitten', monarchista: 'Monarchist', anarchista: 'Anarchist', kapitalista: 'Capitalist',
     liberals: 'Liberals', fascists: 'Fascists',
     
+    desc_liberal: 'Goal: Enact 5 Liberal policies or assassinate Hitler.',
+    desc_fascist: 'Goal: Enact 6 Fascist policies or elect Hitler after 3 Fascist policies.',
+    desc_hitler: 'Goal: Play as a Liberal and get elected Chancellor after 3 Fascist policies.',
+    desc_grandma: 'Fascist loyalty. Other fascists know you, but you don’t know them. If executed, you can choose someone else to die instead!',
+    desc_smuggler: 'Fascist loyalty.',
+    desc_komunista: 'Goal: Enact 5 Communist policies or assassinate Hitler.',
+    desc_kitten: 'Liberal side. Sees 3 player memberships at start. If someone guesses Kitten incorrectly, they die!',
+    desc_monarchista: 'Becomes Dictator upon Hitler’s death.',
+    desc_anarchista: 'Wins if Communist track fills and at least 2 anarchist policies exist.',
+    desc_kapitalista: 'Has dual loyalty and chooses which one to show when investigated.',
+
     secretRole: 'Secret role', partyMembership: 'Party membership', partyL: 'Liberal Party', partyF: 'Fascist Party', partyK: 'Communist Party', partyDual: 'Dual (Fascist/Liberal)',
     myRole: 'My role', tapReveal: 'Tap and shield the screen with your hand', hide: 'Hide', close: 'Close',
-    goalLiberal: 'Enact 5 Liberal policies, or assassinate Hitler.',
-    goalFascist: 'Enact 6 Fascist policies, or get Hitler elected Chancellor after 3 Fascist policies.',
-    goalHitler: 'Play as a Liberal and earn trust.',
     
     imReady: 'Got it', readyCount: 'Ready {r} / {n}', forceContinue: 'Continue without waiting',
     libTrack: 'Liberal policies', fasTrack: 'Fascist policies', komTrack: 'Communist policies',
@@ -153,7 +169,7 @@ window.I18N = {
     vetoRefusedEv: 'The President refused the veto', investigatedEv: '{p} investigated {t}', specialEv: '{p} called a special election: {t}',
     peekEv: '{p} peeked at the deck',
     h_election: '{p} nominated {c}', h_passed: 'elected', h_failed: 'rejected', h_claims: 'claims',
-    history: 'History', chat: 'Chat', chatPh: 'Write a message…', send: 'Send', noHistory: 'Nothing has happened yet.',
+    history: 'History', chat: 'Chat', rulesShort: 'Rules', chatPh: 'Write a message…', send: 'Send', noHistory: 'Nothing has happened yet.',
     sysJoined: '{name} joined', sysLeft: '{name} left', sysKicked: '{name} was kicked', sysStart: 'Game starts ({n} players)',
     
     winLiberal: 'Liberals win!', winFascist: 'Fascists win!', winKomunista: 'Communists win!',
@@ -167,7 +183,7 @@ window.I18N = {
     e_network: 'Connection problem.', e_kicked: 'You were kicked from the game.', e_generic: 'Something went wrong.',
     reconnecting: 'Reconnecting…', copied: 'Link copied', copyLink: 'Copy link',
     credits: 'Fan adaptation of Secret Hitler (CC BY-NC-SA 4.0).',
-    rulesShort: 'Rules', confirmLeave: 'Really leave the game?', exit: 'Leave',
+    confirmLeave: 'Really leave the game?', exit: 'Leave',
     confirmCloseRoom: 'Close this game?', confirmExitGame: 'Leave the running game?', e_roomClosed: 'The game was closed.'
   }
 };
