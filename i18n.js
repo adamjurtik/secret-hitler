@@ -10,16 +10,16 @@ window.I18N = {
     yourName: 'Tvoje jméno', namePh: 'např. Adam', createGame: 'Založit', roomCode: 'Kód hry', joinGame: 'Vstoupit',
     joinHint: 'Kód najdeš na obrazovce zakladatele.', lobby: 'Čekárna', scanToJoin: 'Naskenuj a připoj se',
     orEnterCode: 'nebo zadej kód na', players: 'Hráči', waitingHost: 'Čeká se, až zakladatel spustí hru…',
-    start: 'Spustit hru', needPlayers: 'Potřeba 5–10 hráčů (teď {n})', leave: 'Opustit hru', kick: 'Vyhodit',
+    start: 'Spustit hru', needPlayers: 'Potřeba 5–20 hráčů (teď {n})', leave: 'Opustit hru', kick: 'Vyhodit',
     host: 'zakladatel', you: 'ty', offline: 'offline', boardScreen: 'Společná obrazovka',
     boardConnected: 'Obrazovka připojena', boardOffline: 'Společná obrazovka je offline',
     
     // Roles
     liberal: 'Liberál', fascist: 'Fašista', hitler: 'Hitler', grandma: 'Grandma', smuggler: 'Smuggler',
-    komunista: 'Komunista', kitten: 'Kitten', monarchista: 'Monarchista', anarchista: 'Anarchista',
+    komunista: 'Komunista', kitten: 'Kitten', monarchista: 'Monarchista', anarchista: 'Anarchista', kapitalista: 'Kapitalista',
     liberals: 'Liberálové', fascists: 'Fašisté',
     
-    secretRole: 'Tajná role', partyMembership: 'Stranická příslušnost', partyL: 'Liberální strana', partyF: 'Fašistická strana', partyK: 'Komunistická strana',
+    secretRole: 'Tajná role', partyMembership: 'Stranická příslušnost', partyL: 'Liberální strana', partyF: 'Fašistická strana', partyK: 'Komunistická strana', partyDual: 'Dual (Fašistická/Liberální)',
     myRole: 'Moje role', tapReveal: 'Klepni a zakryj obrazovku rukou', hide: 'Zakrýt', close: 'Zavřít',
     goalLiberal: 'Přijměte 5 liberálních zákonů, nebo zastřelte Hitlera.',
     goalFascist: 'Přijměte 6 fašistických zákonů, nebo po 3 fašistických zákonech zvolte Hitlera kancléřem.',
@@ -96,15 +96,15 @@ window.I18N = {
     yourName: 'Your name', namePh: 'e.g. Adam', createGame: 'Create', roomCode: 'Game code', joinGame: 'Enter',
     joinHint: 'Find the code on the host screen.', lobby: 'Lobby', scanToJoin: 'Scan to join',
     orEnterCode: 'or enter the code at', players: 'Players', waitingHost: 'Waiting for the host to start…',
-    start: 'Start game', needPlayers: '5–10 players needed (now {n})', leave: 'Leave game', kick: 'Kick',
+    start: 'Start game', needPlayers: '5–20 players needed (now {n})', leave: 'Leave game', kick: 'Kick',
     host: 'host', you: 'you', offline: 'offline', boardScreen: 'Shared screen',
     boardConnected: 'Screen connected', boardOffline: 'Shared screen is offline',
     
     liberal: 'Liberal', fascist: 'Fascist', hitler: 'Hitler', grandma: 'Grandma', smuggler: 'Smuggler',
-    komunista: 'Communist', kitten: 'Kitten', monarchista: 'Monarchist', anarchista: 'Anarchist',
+    komunista: 'Communist', kitten: 'Kitten', monarchista: 'Monarchist', anarchista: 'Anarchist', kapitalista: 'Capitalist',
     liberals: 'Liberals', fascists: 'Fascists',
     
-    secretRole: 'Secret role', partyMembership: 'Party membership', partyL: 'Liberal Party', partyF: 'Fascist Party', partyK: 'Communist Party',
+    secretRole: 'Secret role', partyMembership: 'Party membership', partyL: 'Liberal Party', partyF: 'Fascist Party', partyK: 'Communist Party', partyDual: 'Dual (Fascist/Liberal)',
     myRole: 'My role', tapReveal: 'Tap and shield the screen with your hand', hide: 'Hide', close: 'Close',
     goalLiberal: 'Enact 5 Liberal policies, or assassinate Hitler.',
     goalFascist: 'Enact 6 Fascist policies, or get Hitler elected Chancellor after 3 Fascist policies.',
