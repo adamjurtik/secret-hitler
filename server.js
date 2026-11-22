@@ -20,24 +20,38 @@ const MIME = {
   '.ico': 'image/x-icon', '.json': 'application/json', '.webmanifest': 'application/manifest+json'
 };
 
-// Role tables for Classic
 const ROLE_TABLE_CLASSIC = { 5: [3, 1], 6: [4, 1], 7: [4, 2], 8: [5, 2], 9: [5, 3], 10: [6, 3] };
 
-// Role distribution setup for Expansion (approx based on rules: Liberals, Fascists + Hitler, Communists, Others)
-function getExpansionRoles(n) {
-  // Returns array of roles for expansion
-  if (n <= 5) return ['liberal', 'liberal', 'liberal', 'fascist', 'hitler'];
-  if (n === 6) return ['liberal', 'liberal', 'liberal', 'fascist', 'grandma', 'hitler'];
-  if (n === 7) return ['liberal', 'liberal', 'liberal', 'fascist', 'smuggler', 'komunista', 'hitler'];
-  if (n === 8) return ['liberal', 'liberal', 'komunista', 'komunista', 'fascist', 'kitten', 'monarchista', 'hitler'];
-  if (n === 9) return ['liberal', 'liberal', 'komunista', 'komunista', 'fascist', 'grandma', 'kitten', 'anarchista', 'hitler'];
-  return ['liberal', 'liberal', 'komunista', 'komunista', 'fascist', 'grandma', 'smuggler', 'kitten', 'monarchista', 'hitler'];
+// Exact table from expansion photo (Columns: Hitler, Fašisti, Grandma, Liberálové, Kitten, Otto, Komunisti, Smuggler, Monarchista, Anarchista, Kapitalista)
+const EXPANSION_ROLE_TABLE = {
+  6:  { hitler: 1, fašisti: 1, grandma: 0, liberal: 2, kitten: 0, otto: 1, komunista: 1, smuggler: 0, monarchista: 0, anarchista: 0, kapitalista: 0 },
+  7:  { hitler: 1, fašisti: 1, grandma: 0, liberal: 3, kitten: 0, otto: 1, komunista: 1, smuggler: 0, monarchista: 0, anarchista: 0, kapitalista: 0 },
+  8:  { hitler: 1, fašisti: 2, grandma: 0, liberal: 3, kitten: 0, otto: 1, komunista: 1, smuggler: 0, monarchista: 0, anarchista: 0, kapitalista: 0 },
+  9:  { hitler: 1, fašisti: 1, grandma: 1, liberal: 3, kitten: 0, otto: 1, komunista: 1, smuggler: 1, monarchista: 0, anarchista: 0, kapitalista: 0 },
+  10: { hitler: 1, fašisti: 1, grandma: 1, liberal: 3, kitten: 1, otto: 1, komunista: 1, smuggler: 1, monarchista: 0, anarchista: 0, kapitalista: 0 },
+  11: { hitler: 1, fašisti: 1, grandma: 1, liberal: 4, kitten: 1, otto: 1, komunista: 1, smuggler: 1, monarchista: 0, anarchista: 0, kapitalista: 0 },
+  12: { hitler: 1, fašisti: 1, grandma: 1, liberal: 4, kitten: 1, otto: 1, komunista: 1, smuggler: 1, monarchista: 1, anarchista: 0, kapitalista: 0 },
+  13: { hitler: 1, fašisti: 1, grandma: 1, liberal: 4, kitten: 1, otto: 1, komunista: 2, smuggler: 1, monarchista: 1, anarchista: 0, kapitalista: 0 },
+  14: { hitler: 1, fašisti: 1, grandma: 1, liberal: 5, kitten: 1, otto: 1, komunista: 2, smuggler: 1, monarchista: 1, anarchista: 1, kapitalista: 0 },
+  15: { hitler: 1, fašisti: 1, grandma: 1, liberal: 5, kitten: 1, otto: 1, komunista: 3, smuggler: 1, monarchista: 1, anarchista: 1, kapitalista: 0 },
+  16: { hitler: 1, fašisti: 1, grandma: 1, liberal: 5, kitten: 1, otto: 1, komunista: 3, smuggler: 1, monarchista: 1, anarchista: 1, kapitalista: 1 },
+  17: { hitler: 1, fašisti: 2, grandma: 1, liberal: 5, kitten: 1, otto: 1, komunista: 3, smuggler: 1, monarchista: 1, anarchista: 1, kapitalista: 1 },
+  18: { hitler: 1, fašisti: 2, grandma: 1, liberal: 6, kitten: 1, otto: 1, komunista: 3, smuggler: 1, monarchista: 1, anarchista: 1, kapitalista: 1 },
+  19: { hitler: 1, fašisti: 2, grandma: 1, liberal: 6, kitten: 1, otto: 1, komunista: 3, smuggler: 1, monarchista: 1, anarchista: 1, kapitalista: 1 },
+  20: { hitler: 1, fašisti: 2, grandma: 1, liberal: 6, kitten: 2, otto: 1, komunista: 3, smuggler: 1, monarchista: 1, anarchista: 1, kapitalista: 1 }
+};
+
+function getExpansionRolesArray(n) {
+  const spec = EXPANSION_ROLE_TABLE[n] || EXPANSION_ROLE_TABLE[10];
+  let arr = [];
+  for (let [role, count] of Object.entries(spec)) {
+    for (let i = 0; i < count; i++) arr.push(role);
+  }
+  return arr;
 }
 
 function powerTrack(n, mode) {
-  if (mode === 'expansion') {
-    return [null, 'investigate', 'special', 'execute', 'execute', null];
-  }
+  if (mode === 'expansion') return [null, 'investigate', 'special', 'execute', 'execute', null];
   if (n <= 6) return [null, null, 'peek', 'execute', 'execute', null];
   if (n <= 8) return [null, 'investigate', 'special', 'execute', 'execute', null];
   return ['investigate', 'investigate', 'special', 'execute', 'execute', null];
@@ -73,7 +87,7 @@ function createRoom(mode, subMode) {
 }
 function addPlayer(room, name) {
   if (room.status !== 'lobby') fail('gameRunning');
-  if (room.players.length >= 10) fail('roomFull');
+  if (room.players.length >= 20) fail('roomFull');
   name = cleanName(name);
   if (room.players.some(p => p.name.toLowerCase() === name.toLowerCase())) fail('nameTaken');
   const p = { id: 'p' + room.nextPid++, token: token(), name, alive: true, role: null, party: null };
@@ -101,12 +115,13 @@ function sysChat(room, key, params) {
 function startGame(room) {
   const n = room.players.length;
   if (n < 5) fail('notEnoughPlayers');
-  if (n > 10) fail('roomFull');
+  if (n > 20) fail('roomFull');
   
   let roles = [];
   if (room.subMode === 'expansion') {
-    roles = shuffle(getExpansionRoles(n));
+    roles = shuffle(getExpansionRolesArray(n));
   } else {
+    if (n > 10) fail('roomFull');
     const [L, F] = ROLE_TABLE_CLASSIC[n];
     roles = shuffle([...Array(L).fill('liberal'), ...Array(F).fill('fascist'), 'hitler']);
   }
@@ -115,6 +130,7 @@ function startGame(room) {
     p.role = roles[i]; 
     if (['liberal', 'kitten', 'otto'].includes(roles[i])) p.party = 'liberal';
     else if (['komunista', 'smuggler', 'rote_kapelle'].includes(roles[i])) p.party = 'komunista';
+    else if (roles[i] === 'kapitalista') p.party = 'dual'; // má obě příslušnosti
     else p.party = 'fascist';
     p.alive = true; 
   });
@@ -124,7 +140,7 @@ function startGame(room) {
 
   let deckCards = [...Array(6).fill('L'), ...Array(11).fill('F')];
   if (room.subMode === 'expansion') {
-    deckCards = deckCards.concat(['K', 'K', 'A', 'A']); // Add Communist and Anarchist placeholder policies for expansion
+    deckCards = deckCards.concat(['K', 'K', 'K', 'A', 'A']); 
   }
 
   room.game = {
@@ -352,7 +368,8 @@ function act(room, actor, a) {
       if (g.power === 'investigate') {
         if (g.investigated.includes(t.id)) fail('alreadyInvestigated');
         g.investigated.push(t.id);
-        (g.priv[me.id] = g.priv[me.id] || []).push({ type: 'investigate', target: t.id, party: t.party, round: g.round });
+        const shownParty = t.party === 'dual' ? (a.partyChoice || 'liberal') : t.party;
+        (g.priv[me.id] = g.priv[me.id] || []).push({ type: 'investigate', target: t.id, party: shownParty, round: g.round });
         g.history.push({ type: 'investigate', round: g.round, president: me.id, target: t.id });
         pushEvent(g, { type: 'investigate', president: me.id, target: t.id });
         g.phase = 'powerAck'; return;
@@ -423,8 +440,8 @@ function view(room, tok) {
   if (ended) v.game.roles = Object.fromEntries(room.players.map(p => [p.id, p.role]));
   if (me && !ended) {
     const priv = { role: me.role, party: me.party, known: {}, myVote: g.phase === 'vote' && me.id in g.votes ? g.votes[me.id] : null, results: g.priv[me.id] || [] };
-    if (me.role === 'fascist' || me.role === 'hitler' || me.role === 'grandma' || me.role === 'smuggler') {
-      room.players.forEach(p => { if (p.id !== me.id && p.role !== 'liberal' && p.role !== 'komunista') priv.known[p.id] = p.role; });
+    if (['fascist', 'hitler', 'grandma', 'smuggler'].includes(me.role)) {
+      room.players.forEach(p => { if (p.id !== me.id && ['fascist', 'hitler', 'grandma', 'smuggler'].includes(p.role)) priv.known[p.id] = p.role; });
     }
     if ((g.phase === 'legPres' && me.id === g.president) || ((g.phase === 'legChanc' || g.phase === 'veto') && (me.id === g.chancellor || me.id === g.president))) priv.hand = g.hand;
     if (g.phase === 'power' && g.power === 'peek' && me.id === g.president) priv.peek = g.peek;
