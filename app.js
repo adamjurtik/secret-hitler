@@ -8,7 +8,7 @@
   let session = null;
   try { session = JSON.parse(localStorage.getItem('sh_session') || 'null'); } catch { session = null; }
   let V = null, es = null, screen = 'home', connLost = false;
-  const ui = { mode: 'personal', subMode: 'classic', tab: 'history', sel: null, selKey: '', roleOpen: false, roleShown: false, error: '', unread: 0, lastChat: 0, seen: -1, gameNo: -1, joinCode: '', busy: false };
+  const ui = { mode: 'personal', subMode: 'classic', tab: 'history', sel: null, selKey: '', roleOpen: false, roleShown: false, rulesOpen: false, error: '', unread: 0, lastChat: 0, seen: -1, gameNo: -1, joinCode: '', busy: false };
   const ovQueue = []; let ovTimer = null;
 
   function t(k, p) {
@@ -40,7 +40,6 @@
     const ic = c === 'L' ? ICON.dove : c === 'K' ? ICON.special : ICON.skull;
     return `<div class="tile ${c} ${extra || ''}" style="--bgc:${bg}">${ic}<span class="lbl">${t('policy' + c)}</span></div>`;
   };
-  const claimHtml = (s) => `<span class="cl">${s.split('').map((c) => `<i class="${c}"></i>`).join('')}</span>`;
 
   const pl = (id) => V && V.players.find((p) => p.id === id);
   const nm = (id) => { const p = pl(id); return p ? esc(p.name) : '?'; };
@@ -134,10 +133,21 @@
   }
   $('#overlay').addEventListener('click', nextOverlay);
 
-  function closeModal() { ui.roleOpen = false; ui.roleShown = false; $('#modal').hidden = true; $('#modal').innerHTML = ''; }
+  function closeModal() { ui.roleOpen = false; ui.roleShown = false; ui.rulesOpen = false; $('#modal').hidden = true; $('#modal').innerHTML = ''; }
   function renderModal() {
     const m = $('#modal');
-    if (!ui.roleOpen || !V || !V.private) { m.hidden = true; return; }
+    if (!ui.roleOpen && !ui.rulesOpen) { m.hidden = true; return; }
+    
+    if (ui.rulesOpen) {
+      m.innerHTML = `<div class="box panel framed">
+        <div class="row" style="justify-content:space-between;margin-bottom:12px"><h3>${t('rulesShort')}</h3><button class="btn ghost small" data-act="closeModal">${t('close')}</button></div>
+        <p class="type" style="font-size:13px;line-height:1.5">${V && V.subMode === 'expansion' ? '<b>Expansion Pravidla:</b> Hra obsahuje fašisty, liberály, komunisty a další frakce. Komunistický plán má 5 polí. Kapitál a anarchisté mají specifické podmínky pro výhru.' : '<b>Classic Pravidla:</b> Liberálové vyhrávají 5 zákony nebo zabitím Hitlera. Fašisté 6 zákony nebo zvolením Hitlera po 3. fašistickém zákoně.'}</p>
+        <div class="row" style="margin-top:16px"><button class="btn block dark small" data-act="closeModal">${t('close')}</button></div></div>`;
+      m.hidden = false;
+      return;
+    }
+
+    if (!V || !V.private) { m.hidden = true; return; }
     const pr = V.private;
     let body;
     if (!ui.roleShown) {
@@ -149,11 +159,14 @@
       let knownHtml = `<p class="goal muted">${t('knowNothingLib')}</p>`;
       if (known.length) knownHtml = `<div class="known"><b>${t('knowFascists')}</b> ${known.map(([id, r]) => `<span class="badge ${r === 'hitler' ? 'kH' : 'kF'}">${nm(id)} — ${t(r)}</span>`).join(' ')}</div>`;
       
+      const roleDescKey = 'desc_' + pr.role;
+      const roleDescText = I18N[lang][roleDescKey] || I18N.cs[roleDescKey] || t('goalLiberal');
+
       body = `<div class="cards-pair">
           <div class="rcard ${pr.role}" style="--bgc:${bg}"><span class="k">${t('secretRole')}</span>${roleIcon}<span class="v">${t(pr.role)}</span></div>
-          <div class="rcard partyL" style="--bgc:var(--blue2)"><span class="k">${t('partyMembership')}</span>${ICON.dove}<span class="v" style="font-size:20px">${t('partyL')}</span></div>
+          <div class="rcard partyL" style="--bgc:var(--blue2)"><span class="k">${t('partyMembership')}</span>${ICON.dove}<span class="v" style="font-size:18px">${t(pr.party === 'dual' ? 'partyDual' : 'partyL')}</span></div>
         </div>
-        <p class="goal">${t('goalLiberal')}</p>
+        <p class="goal"><b>Cíle a schopnosti:</b> ${roleDescText}</p>
         ${knownHtml}
         <div class="row" style="margin-top:16px"><button class="btn dark small" data-act="unreveal">${t('hide')}</button></div>`;
     }
@@ -224,11 +237,14 @@
       ${canKick && p.id !== V.hostId ? `<button class="btn ghost small" data-kick="${p.id}">${t('kick')}</button>` : ''}</li>`).join('')}</ul>`;
   }
   function lobbyScreen() {
-    const n = V.players.length; const ok = n >= 5 && n <= 10;
-    const startBtn = V.isHost ? `<button class="btn block" data-act="start" ${ok ? '' : 'disabled'}>${t('start')}</button><p class="type muted center" style="margin:6px 0 0;font-size:13px">${t('needPlayers', { n })}</p>` : `<p class="type center">${t('waitingHost')}</p>`;
+    const n = V.players.length; 
+    const minP = V.subMode === 'expansion' ? 6 : 5;
+    const maxP = V.subMode === 'expansion' ? 20 : 10;
+    const ok = n >= minP && n <= maxP;
+    const startBtn = V.isHost ? `<button class="btn block" data-act="start" ${ok ? '' : 'disabled'}>${t('start')}</button><p class="type muted center" style="margin:6px 0 0;font-size:13px">${t('needPlayers', { min: minP, max: maxP, n })}</p>` : `<p class="type center">${t('waitingHost')}</p>`;
     return `<div class="lobby-grid">
       <h2 class="deco" style="font-size:36px">${t('lobby')} (${V.subMode === 'expansion' ? 'Expansion' : 'Classic'})</h2>
-      <div class="panel"><div class="panel-title">${t('players')} · ${n}/10</div>${playerList(V.isHost)}</div>
+      <div class="panel"><div class="panel-title">${t('players')} · ${n}/${maxP}</div>${playerList(V.isHost)}</div>
       ${startBtn}
       <div class="panel framed">${qrBlock(false)}</div>
       <button class="btn ghost small" data-act="leave" style="justify-self:start">${t('leave')}</button>
@@ -422,7 +438,8 @@
     const g = V.game; const ended = g.phase === 'ended';
     const head = ended ? endBanner() : statusBar();
     const roleBtn = !ended && g.phase !== 'roles' ? `<button class="btn dark small role-btn" data-act="role">${t('myRole')}</button>` : '';
-    return `<div class="game">${head}${ended ? '' : actionPanel()}${roleBtn}${ended ? seats() : ''}${tracks()}${ended ? '' : seats()}
+    const rulesBtn = `<button class="btn ghost small" data-act="rules" style="margin-top:8px">${t('rulesShort')}</button>`;
+    return `<div class="game">${head}${ended ? '' : actionPanel()}${roleBtn}${rulesBtn}${ended ? '' : seats()}${tracks()}${ended ? seats() : ''}
       <div class="panel"><div class="panel-title">${t('chat')}</div>${chatBox()}</div></div>`;
   }
 
@@ -507,7 +524,8 @@
       case 'start': return act('start');
       case 'leave': if (confirm(t('confirmLeave'))) { await act('leave'); endSession(); } return;
       case 'force': return act('forceContinue');
-      case 'role': ui.roleOpen = true; ui.roleShown = false; renderModal(); return;
+      case 'role': ui.roleOpen = true; ui.rulesOpen = false; ui.roleShown = false; renderModal(); return;
+      case 'rules': ui.rulesOpen = true; ui.roleOpen = false; renderModal(); return;
       case 'ack': return act('ackRole');
       case 'discard': if (ui.sel !== null) { const i = ui.sel; ui.sel = null; act('presDiscard', { index: i }); } return;
       case 'enact': if (ui.sel !== null) { const i = ui.sel; ui.sel = null; act('chancEnact', { index: i }); } return;
