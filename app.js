@@ -4,12 +4,11 @@
   const main = $('#main');
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  // ---------- state ----------
-  let lang = localStorage.getItem('sh_lang') || ((navigator.language || 'cs').toLowerCase().startsWith('cs') || (navigator.language || '').toLowerCase().startsWith('sk') ? 'cs' : 'en');
+  let lang = localStorage.getItem('sh_lang') || ((navigator.language || 'cs').toLowerCase().startsWith('cs') ? 'cs' : 'en');
   let session = null;
   try { session = JSON.parse(localStorage.getItem('sh_session') || 'null'); } catch { session = null; }
   let V = null, es = null, screen = 'home', connLost = false;
-  const ui = { mode: 'personal', tab: 'history', sel: null, selKey: '', roleOpen: false, roleShown: false, error: '', unread: 0, lastChat: 0, seen: -1, gameNo: -1, joinCode: '', busy: false };
+  const ui = { mode: 'personal', subMode: 'classic', tab: 'history', sel: null, selKey: '', roleOpen: false, roleShown: false, error: '', unread: 0, lastChat: 0, seen: -1, gameNo: -1, joinCode: '', busy: false };
   const ovQueue = []; let ovTimer = null;
 
   function t(k, p) {
@@ -18,7 +17,6 @@
     return s;
   }
 
-  // ---------- icons (original artwork) ----------
   const skullPath = '<path d="M32 6C18 6 9 16 9 29c0 8 4 13 9 16v9c0 2 1 3 3 3h22c2 0 3-1 3-3v-9c5-3 9-8 9-16C55 16 46 6 32 6z"/><g style="fill:var(--bgc,#1d1a17)"><circle cx="23" cy="30" r="6"/><circle cx="41" cy="30" r="6"/><path d="M32 37l-4 7h8z"/><rect x="25.5" y="49" width="3" height="8"/><rect x="30.5" y="49" width="3" height="8"/><rect x="35.5" y="49" width="3" height="8"/></g>';
   const ICON = {
     dove: '<svg viewBox="0 0 64 64" fill="currentColor"><path d="M4 30c5 4 12 6 19 5 3 6 10 10 18 9l7 5 1-7 9-4-9-1c-2-6-8-9-14-8-4-9-12-15-23-17 3 6 6 12 9 17-6-1-11 0-17 1z"/><circle cx="46" cy="38" r="1.7" style="fill:var(--bgc,#1d1a17)"/></svg>',
@@ -33,13 +31,21 @@
     screen: '<svg viewBox="0 0 64 64" width="38" fill="none" stroke="currentColor" stroke-width="4"><rect x="6" y="8" width="52" height="32" rx="2"/><path d="M24 48h16M32 40v8"/><rect x="6" y="50" width="9" height="12" rx="2"/><rect x="49" y="50" width="9" height="12" rx="2"/></svg>',
     emblem: '<svg viewBox="0 0 120 120"><defs><clipPath id="cl"><rect width="60" height="120"/></clipPath><clipPath id="cr"><rect x="60" width="60" height="120"/></clipPath></defs><circle cx="60" cy="60" r="56" fill="#2c5a78" clip-path="url(#cl)"/><circle cx="60" cy="60" r="56" fill="#b5301f" clip-path="url(#cr)"/><circle cx="60" cy="60" r="56" fill="none" stroke="#1d1a17" stroke-width="5"/><circle cx="60" cy="60" r="48" fill="none" stroke="#efe3c8" stroke-width="1.5"/><path d="M60 4v112" stroke="#1d1a17" stroke-width="3"/><g transform="translate(6 30) scale(.82)" fill="#efe3c8" style="--bgc:#2c5a78"><path d="M4 30c5 4 12 6 19 5 3 6 10 10 18 9l7 5 1-7 9-4-9-1c-2-6-8-9-14-8-4-9-12-15-23-17 3 6 6 12 9 17-6-1-11 0-17 1z"/></g><g transform="translate(64 35) scale(.75)" fill="#efe3c8" style="--bgc:#b5301f">' + skullPath + '</g></svg>'
   };
-  const tile = (c, extra) => { const labels={L:'policyL',F:'policyF',C:'policyC',A:'policyA',AC:'antiC',AF:'antiF',SD:'socialDemocratic'}; const bg=c==='L'?'var(--blue)':c==='C'||c==='A'||c==='AF'?'var(--green, #47765b)':'var(--red)'; return `<div class="tile ${c} ${extra || ''}" style="--bgc:${bg}"><span class="lbl">${t(labels[c]||'policyF')}</span></div>`; };
+
+  const tile = (c, extra) => {
+    let bg = 'var(--blue)';
+    if (c === 'F') bg = 'var(--red)';
+    if (c === 'K') bg = 'var(--blue2)';
+    if (c === 'A') bg = 'var(--orange)';
+    const ic = c === 'L' ? ICON.dove : c === 'K' ? ICON.special : ICON.skull;
+    return `<div class="tile ${c} ${extra || ''}" style="--bgc:${bg}">${ic}<span class="lbl">${t('policy' + c)}</span></div>`;
+  };
   const claimHtml = (s) => `<span class="cl">${s.split('').map((c) => `<i class="${c}"></i>`).join('')}</span>`;
 
-  // ---------- helpers ----------
   const pl = (id) => V && V.players.find((p) => p.id === id);
   const nm = (id) => { const p = pl(id); return p ? esc(p.name) : '?'; };
   const aliveCount = () => V.players.filter((p) => p.alive).length;
+
   function toast(msg, ms) {
     const el = $('#toast'); el.textContent = msg; el.hidden = false;
     clearTimeout(toast.t); toast.t = setTimeout(() => { el.hidden = true; }, ms || 2600);
@@ -54,10 +60,9 @@
   async function act(type, extra) {
     if (!session) return;
     try { await post('/api/action', { code: session.code, token: session.token, action: { type, ...(extra || {}) } }); }
-    catch (e) { toast(errText(e)); render(); }
+    catch (e) { toast(errText(e)); }
   }
 
-  // ---------- session / realtime ----------
   function saveSession(s) { session = s; localStorage.setItem('sh_session', JSON.stringify(s)); }
   function endSession(msg) {
     if (es) es.close(); es = null;
@@ -100,7 +105,6 @@
     render();
   }
 
-  // ---------- overlays ----------
   function queueEvent(e, v) {
     const name = (id) => { const p = v.players.find((x) => x.id === id); return p ? esc(p.name) : '?'; };
     let html = null, ms = 4200;
@@ -110,27 +114,13 @@
         <div class="stamp ${e.passed ? 'ok' : 'no'}">${t(e.passed ? 'govElected' : 'govRejected')}</div>
         <div class="type">${t('ja')} ${e.ja} : ${e.nein} ${t('nein')}</div>
         <div class="ov-votes">${Object.entries(e.votes).map(([id, y], i) => `<div style="animation-delay:${i * 70}ms">${name(id)}<span class="mini-ballot ${y ? 'ja' : 'nein'}">${t(y ? 'ja' : 'nein')}</span></div>`).join('')}</div></div>`;
-    } else if (e.type === 'policy' || e.type === 'antiPolicy') {
-      const key={L:'enactedL',F:'enactedF',C:'enactedC',A:'enactedA',AC:'enactedAC',AF:'enactedAF',SD:'enactedSD'}[e.card]||'enactedF';
-      html = `<div class="ov-card"><h2>${t(e.chaos ? 'chaosEnacted' : key)}</h2><div class="ov-tile">${tile(e.card, 'flip')}</div></div>`;
+    } else if (e.type === 'policy') {
+      html = `<div class="ov-card"><h2>${t(e.chaos ? 'chaosEnacted' : 'enacted' + e.card)}</h2><div class="ov-tile">${tile(e.card, 'flip')}</div></div>`;
     } else if (e.type === 'execute') {
       html = `<div class="ov-card" style="--bgc:var(--paper)"><div style="width:90px;margin:0 auto;color:var(--red)">${ICON.execute}</div><h2>${t('executed', { name: name(e.target) })}</h2></div>`;
     } else if (e.type === 'veto') {
       html = `<div class="ov-card"><div style="width:80px;margin:0 auto;color:var(--red)">${ICON.veto}</div><h2>${t('vetoed')}</h2></div>`;
-    } else if (e.type === 'vetoRefused') toast(t('vetoRefusedEv'));
-    else if (e.type === 'investigate') toast(t('investigatedEv', { p: name(e.president), t: name(e.target) }), 3500);
-    else if (e.type === 'special') toast(t('specialEv', { p: name(e.president), t: name(e.target) }), 3500);
-    else if (e.type === 'peek') toast(t('peekEv', { p: name(e.president) }), 3000);
-    else if (e.type === 'dictatorRevealed') toast(t('dictatorRevealedEv', { name: name(e.target) }), 5500);
-    else if (e.type === 'confession') toast(t('confessionEv', { name: name(e.target), party: t(e.party==='liberal'?'partyL':e.party==='communist'?'partyC':e.party==='anarchist'?'partyA':'partyF') }), 5500);
-    else if (e.type === 'radicalised') toast(t('radicalisedEv'), 3500);
-    else if (e.type === 'fiveYearPlan') toast(t('fiveYearPlanEv'), 3500);
-    else if (e.type === 'congress') toast(t('congressEv'), 3500);
-    else if (e.type === 'capitalistKilled') toast(t('capitalistKilledEv'), 4000);
-    else if (e.type === 'marked') toast(t('markedEv', { name: name(e.target) }), 4000);
-    else if (e.type === 'pardon') toast(t('pardonEv', { name: e.target ? name(e.target) : '?' }), 3500);
-    else if (e.type === 'impeachment') toast(t('impeachmentEv', { source: name(e.source), recipient: name(e.recipient) }), 3500);
-    else if (e.type === 'voteNoConfidence') toast(t('voteNoConfidenceEv'), 4000);
+    }
     if (html) { ovQueue.push({ html, ms }); if (!ovTimer && $('#overlay').hidden) nextOverlay(); }
   }
   function nextOverlay() {
@@ -144,7 +134,6 @@
   }
   $('#overlay').addEventListener('click', nextOverlay);
 
-  // ---------- role modal ----------
   function closeModal() { ui.roleOpen = false; ui.roleShown = false; $('#modal').hidden = true; $('#modal').innerHTML = ''; }
   function renderModal() {
     const m = $('#modal');
@@ -155,23 +144,17 @@
       body = `<div class="envelope" data-act="reveal"><div class="seal">S</div><h2>${t('secretRole')}</h2><div class="type">${esc(V.me.name)}</div><div class="type muted">${t('tapReveal')}</div></div>`;
     } else {
       const roleIcon = pr.role === 'liberal' ? ICON.dove : pr.role === 'hitler' ? ICON.hitler : ICON.skull;
-      const bg = pr.role === 'liberal' ? 'var(--blue)' : pr.role === 'hitler' ? 'var(--ink)' : pr.party === 'communist' ? 'var(--green, #47765b)' : 'var(--red)';
+      const bg = pr.role === 'liberal' ? 'var(--blue)' : pr.role === 'hitler' ? 'var(--ink)' : 'var(--red)';
       const known = Object.entries(pr.known || {});
-      let knownHtml;
-      if (pr.role === 'liberal') knownHtml = `<p class="goal muted">${t('knowNothingLib')}</p>`;
-      else if (known.length) knownHtml = `<div class="known"><b>${t('knowFascists')}</b> ${known.map(([id, r]) => `<span class="badge ${r === 'hitler' ? 'kH' : 'kF'}">${nm(id)} — ${t(r)}</span>`).join(' ')}</div>`;
-      else knownHtml = `<p class="goal muted">${t(pr.party === 'communist' ? 'communistKnowledge' : 'knowNothing')}</p>`;
-      const partyKey = pr.party === 'liberal' ? 'partyL' : pr.party === 'communist' ? 'partyC' : pr.party === 'anarchist' ? 'partyA' : pr.party === 'capitalist' ? 'partyIndependent' : 'partyF';
-      const partyClass = pr.party === 'liberal' ? 'partyL' : pr.party === 'communist' ? 'partyC' : pr.party === 'anarchist' ? 'partyA' : 'partyF';
-      const partyBg = pr.party === 'liberal' ? 'var(--blue2)' : pr.party === 'communist' ? 'var(--green, #47765b)' : pr.party === 'anarchist' ? 'var(--gold)' : pr.party === 'capitalist' ? 'var(--ink)' : 'var(--red2)';
-      const res = (pr.results || []).map((r) => `<div class="known"><span class="badge">${nm(r.target)}</span> → <span class="badge ${r.party === 'liberal' ? 'nh' : r.party === 'communist' ? 'partyC' : 'kF'}">${t(r.party === 'liberal' ? 'partyL' : r.party === 'communist' ? 'partyC' : r.party === 'anarchist' ? 'partyA' : 'partyF')}</span></div>`).join('');
+      let knownHtml = `<p class="goal muted">${t('knowNothingLib')}</p>`;
+      if (known.length) knownHtml = `<div class="known"><b>${t('knowFascists')}</b> ${known.map(([id, r]) => `<span class="badge ${r === 'hitler' ? 'kH' : 'kF'}">${nm(id)} — ${t(r)}</span>`).join(' ')}</div>`;
+      
       body = `<div class="cards-pair">
           <div class="rcard ${pr.role}" style="--bgc:${bg}"><span class="k">${t('secretRole')}</span>${roleIcon}<span class="v">${t(pr.role)}</span></div>
-          <div class="rcard ${partyClass}" style="--bgc:${partyBg}"><span class="k">${t('partyMembership')}</span><span class="v" style="font-size:20px">${t(partyKey)}</span></div>
+          <div class="rcard partyL" style="--bgc:var(--blue2)"><span class="k">${t('partyMembership')}</span>${ICON.dove}<span class="v" style="font-size:20px">${t('partyL')}</span></div>
         </div>
-        <p class="goal">${t(pr.role === 'liberal' ? 'goalLiberal' : pr.role === 'hitler' ? 'goalHitler' : pr.role === 'monarchist' ? 'goalMonarchist' : pr.role === 'dictator' ? 'goalDictator' : pr.role === 'communist' ? 'goalCommunist' : pr.role === 'capitalist' ? 'goalCapitalist' : pr.role === 'anarchist' ? 'goalAnarchist' : pr.role === 'roteKapelle' ? 'goalRoteKapelle' : 'goalFascist')}</p>
+        <p class="goal">${t('goalLiberal')}</p>
         ${knownHtml}
-        ${res ? `<div class="panel-title" style="margin-top:14px">${t('myResults')}</div>${res}` : ''}
         <div class="row" style="margin-top:16px"><button class="btn dark small" data-act="unreveal">${t('hide')}</button></div>`;
     }
     m.innerHTML = `<div class="box panel framed"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h3>${t('myRole')}</h3><button class="btn ghost small" data-act="closeModal">${t('close')}</button></div>${body}</div>`;
@@ -185,7 +168,6 @@
     if (a.dataset.act === 'closeModal') closeModal();
   });
 
-  // ---------- screens ----------
   function homeScreen() {
     return `<section class="poster"><div class="rays"></div>
       <div class="emblem">${ICON.emblem}</div>
@@ -196,12 +178,18 @@
         <button class="btn" data-go="create">${t('create')}</button>
         <button class="btn blue" data-go="join">${t('join')}</button>
       </div></section>
-      <p class="credits">${t('credits')}<br><a href="https://www.secrethitler.com" target="_blank" rel="noopener">secrethitler.com</a></p>`;
+      <p class="credits">${t('credits')}</p>`;
   }
+  
   function createScreen() {
     return `<div class="stack">
       <button class="btn ghost small" data-go="home" style="align-self:flex-start">← ${t('back')}</button>
-      <h2 class="deco" style="font-size:34px">${t('chooseMode')}</h2>
+      <h2 class="deco" style="font-size:28px">${t('chooseSubMode')}</h2>
+      <div class="row" style="gap:10px">
+        <button class="btn ${ui.subMode === 'classic' ? '' : 'ghost'}" data-submode="classic" style="flex:1">${t('modeClassic')}</button>
+        <button class="btn blue ${ui.subMode === 'expansion' ? '' : 'ghost'}" data-submode="expansion" style="flex:1">${t('modeExpansion')}</button>
+      </div>
+      <h2 class="deco" style="font-size:28px;margin-top:10px">${t('chooseMode')}</h2>
       <button class="mode-card ${ui.mode === 'personal' ? 'sel' : ''}" data-mode="personal"><span class="ic">${ICON.phone}</span><span><h3>${t('modePersonal')}</h3><p>${t('modePersonalDesc')}</p></span></button>
       <button class="mode-card board ${ui.mode === 'board' ? 'sel' : ''}" data-mode="board"><span class="ic">${ICON.screen}</span><span><h3>${t('modeBoard')}</h3><p>${t('modeBoardDesc')}</p></span></button>
       ${ui.mode === 'personal' ? `<div class="field"><label for="nameIn">${t('yourName')}</label><input id="nameIn" maxlength="18" autocomplete="nickname" placeholder="${t('namePh')}" value="${esc(localStorage.getItem('sh_name') || '')}"></div>` : ''}
@@ -209,6 +197,7 @@
       <button class="btn block" data-act="create" ${ui.busy ? 'disabled' : ''}>${t('createGame')}</button>
     </div>`;
   }
+  
   function joinScreen() {
     return `<div class="stack">
       <button class="btn ghost small" data-go="home" style="align-self:flex-start">← ${t('back')}</button>
@@ -217,7 +206,6 @@
       <div class="field"><label for="nameIn">${t('yourName')}</label><input id="nameIn" maxlength="18" autocomplete="nickname" placeholder="${t('namePh')}" value="${esc(localStorage.getItem('sh_name') || '')}"></div>
       ${ui.error ? `<div class="error">${esc(ui.error)}</div>` : ''}
       <button class="btn blue block" data-act="join" ${ui.busy ? 'disabled' : ''}>${t('joinGame')}</button>
-      <p class="type muted center" style="font-size:13px">${t('joinHint')}</p>
     </div>`;
   }
 
@@ -235,62 +223,21 @@
       ${V.me && p.id === V.me.id ? `<span class="tag">(${t('you')})</span>` : ''}${p.id === V.hostId ? ` <span class="tag">★ ${t('host')}</span>` : ''}</span>
       ${canKick && p.id !== V.hostId ? `<button class="btn ghost small" data-kick="${p.id}">${t('kick')}</button>` : ''}</li>`).join('')}</ul>`;
   }
-  function roleConfigHtml() {
-    const c = V.settings.roleCounts, ex = V.settings.extensions || {};
-    const roles = [
-      ['liberal',t('liberals'),true], ['fascist',t('fascists'),true], ['hitler',t('hitler'),true],
-      ['communist',t('communists'),!!ex.communists], ['capitalist',t('capitalist'),!!ex.capitalist],
-      ['anarchist',t('anarchist'),!!ex.anarchist], ['monarchist',t('monarchist'),!!ex.monarchist]
-    ];
-    const ext = Object.keys(V.settings.extensionLabels || {}).map((key) => {const dependency=['capitalist','antiPolicies'].includes(key)&&!ex.communists;return `<label class="ext-option"><input type="checkbox" data-ext="${key}" ${ex[key] ? 'checked' : ''} ${dependency?'disabled':''}><span>${esc(t('ext_'+key))}</span></label>`;}).join('');
-    const roleSum=Object.values(c).reduce((a,b)=>a+(Number(b)||0),0);
-    const fields = roles.filter(r => r[2]).map(([key,label]) => `<label><span>${label}</span><input id="role_${key}" type="number" min="${['liberal','fascist','hitler'].includes(key) ? 1 : 0}" max="${['capitalist','anarchist','monarchist'].includes(key)?1:20}" value="${c[key] || 0}" ${key === 'hitler' ? 'readonly' : ''}></label>`).join('');
-    const experimental=(V.players.length>16||(V.players.length<6&&ex.communists))?`<p class="type muted" style="font-size:12px">${t('experimentalRolesNote')}</p>`:'';
-    return `<div class="panel"><div class="panel-title">${t('extensionsHost')}</div><div class="extension-grid">${ext}</div></div>
-      <div class="panel"><div class="panel-title">${t('roleDistributionTitle')}</div><div class="role-config">${fields}</div>
-      <p class="type muted" style="font-size:12px">${t('roleDistributionHint',{n:V.players.length})} ${t('currentRoleSum',{sum:roleSum})}</p>${experimental}
-      <button class="btn ghost small" data-act="saveRoles">Uložit rozložení</button> <button class="btn ghost small" data-act="resetRoles">Obnovit doporučení</button></div>`;
-  }
-  function predealPanel() {
-    const g=V.game, active=Object.entries(g.extensions||{}).filter(([,on])=>on).map(([k])=>t('ext_'+k));
-    const counts=Object.entries(g.roleCounts||{}).filter(([,n])=>n).map(([k,n])=>`${t(k)}: ${n}`).join(' · ');
-    const experimental=(V.players.length>16||(V.players.length<6&&g.extensions.communists))?`<p class="sub">${t('experimentalRolesNote')}</p>`:'';
-    return `<div class="panel action"><h2>${t('predealTitle')}</h2><p class="sub">${t('players')}: ${g.playerCount}. ${t('activeExtensions')}: ${active.length?active.map(esc).join(', '):t('none')}.</p><p class="sub">${t('roleDistribution')}: ${counts||t('notConfigured')}</p>${experimental}${V.isHost?`<button class="btn block dark" data-act="deal">${t('confirmDeal')}</button>`:`<p class="sub">${t('waitingHost')}</p>`}</div>`;
-  }
-  function settingsReadOnlyHtml() {
-    const labels=V.settings.extensionLabels||{}, ex=V.settings.extensions||{}, c=V.settings.roleCounts||{};
-    const enabled=Object.keys(labels).map(k=>`<span class="badge ${ex[k]?'nh':''}">${ex[k]?'✓':'—'} ${esc(t('ext_'+k))}</span>`).join(' ');
-    const roles=Object.entries(c).filter(([,n])=>n).map(([k,n])=>`${esc(t(k))}: ${n}`).join(' · ');
-    const experimental=(V.players.length>16||(V.players.length<6&&ex.communists))?`<p class="type muted" style="font-size:12px">${t('experimentalRolesNote')}</p>`:'';
-    return `<div class="panel"><div class="panel-title">${t('gameSettings')}</div><div class="known">${enabled}</div><p class="type muted" style="font-size:12px">${roles||t('notConfigured')}</p>${experimental}</div>`;
-  }
   function lobbyScreen() {
-    const n = V.players.length; const ok = n >= 5 && n <= 20;
+    const n = V.players.length; const ok = n >= 5 && n <= 10;
     const startBtn = V.isHost ? `<button class="btn block" data-act="start" ${ok ? '' : 'disabled'}>${t('start')}</button><p class="type muted center" style="margin:6px 0 0;font-size:13px">${t('needPlayers', { n })}</p>` : `<p class="type center">${t('waitingHost')}</p>`;
-    if (V.isBoard) {
-      return `<div class="board-lobby">
-        <div class="panel framed">${qrBlock(true)}</div>
-        <div class="stack"><h2 class="deco" style="font-size:44px">${t('lobby')}</h2>
-          <div class="panel"><div class="panel-title">${t('players')} · ${n}/20</div>${n ? playerList(true) : `<p class="type muted">${t('waitingHost')}</p>`}</div>
-          ${V.isHost ? roleConfigHtml() : settingsReadOnlyHtml()}
-          ${startBtn}</div></div>`;
-    }
     return `<div class="lobby-grid">
-      <h2 class="deco" style="font-size:36px">${t('lobby')}</h2>
-      ${V.mode === 'board' ? `<p class="type ${V.boardOnline ? 'muted' : ''}" style="margin:0">${V.boardOnline ? '● ' + t('boardConnected') : '○ ' + t('boardOffline')}</p>` : ''}
-      <div class="panel"><div class="panel-title">${t('players')} · ${n}/20</div>${playerList(V.isHost)}</div>
-      ${V.isHost ? roleConfigHtml() : settingsReadOnlyHtml()}
+      <h2 class="deco" style="font-size:36px">${t('lobby')} (${V.subMode === 'expansion' ? 'Expansion' : 'Classic'})</h2>
+      <div class="panel"><div class="panel-title">${t('players')} · ${n}/10</div>${playerList(V.isHost)}</div>
       ${startBtn}
       <div class="panel framed">${qrBlock(false)}</div>
       <button class="btn ghost small" data-act="leave" style="justify-self:start">${t('leave')}</button>
     </div>`;
   }
 
-  // ---------- game pieces ----------
   function statusLine() {
     const g = V.game; const p = nm(g.presidentId); const c = nm(g.nominee || g.chancellor);
     switch (g.phase) {
-      case 'predeal': return [t('predealTitle'), t('beforeDeal')];
       case 'roles': return [t('st_roles'), t('readyCount', { r: g.ready.length, n: g.playerCount })];
       case 'nominate': return [t('st_nominate', { p }), t('discuss')];
       case 'vote': return [t('st_vote', { p, c }), t('votedCount', { v: g.voted.length, n: aliveCount() })];
@@ -299,11 +246,6 @@
       case 'veto': return [t('st_veto', { p: nm(g.president), c: nm(g.chancellor) }), ''];
       case 'power': return [t('st_power_' + g.power, { p: nm(g.president) }), ''];
       case 'powerAck': return [t('st_powerAck', { p: nm(g.president) }), ''];
-      case 'commPower': return [t('st_commPower', { p: nm(g.president) }), ''];
-      case 'antiPower': return [t('st_antiPower', { p: nm(g.president) }), ''];
-      case 'emergency': return [t('st_emergency', { p: nm(g.president) }), ''];
-      case 'emergencyPeek': return [t('st_emergency', { p: nm(g.emergencyActor) }), ''];
-      case 'emergencyAck': return [t('st_emergency', { p: nm(g.emergencyActor) }), ''];
       default: return ['', ''];
     }
   }
@@ -312,61 +254,74 @@
     const force = V.isHost && V.game.phase === 'roles' ? `<button class="btn ghost small" data-act="force">${t('forceContinue')}</button>` : '';
     return `<div class="status"><div>${a}${b ? `<small>${b}</small>` : ''}</div><div class="stack" style="gap:6px;align-items:flex-end"><span class="rnd">${t('round', { n: V.game.round })}</span>${force}</div></div>`;
   }
+  
   function tracks() {
     const g = V.game;
-    const libTarget = g.liberalTarget || 5;
     let lib = '';
-    for (let i = 0; i < libTarget; i++) lib += `<div class="slot ${i === libTarget-1 ? 'win' : ''}" style="--bgc:var(--lblue)">${i < g.lib ? tile('L') : i === libTarget-1 ? ICON.dove + `<span>${t('winSlot')}</span>` : ''}</div>`;
+    for (let i = 0; i < 5; i++) {
+      lib += `<div class="slot ${i === 4 ? 'win' : ''}" style="--bgc:var(--lblue)">${i < g.lib ? tile('L') : i === 4 ? ICON.dove + `<span>${t('winSlot')}</span>` : ''}</div>`;
+    }
     let fas = '';
-    for (let i = 0; i < 6; i++) { const pw=g.powers[i]; const label=pw?t('pw_'+pw):i===5?t('winSlot'):''; const icon=pw?ICON[pw]:i===5?ICON.skull:''; fas+=`<div class="slot ${i>=3?'danger':''} ${i===5?'win':''}" style="--bgc:var(--orange)">${i<g.fas?tile('F'):`${icon}<span>${label}${i===4?'<br>+ veto':''}</span>`}</div>`; }
-    let comm='';
-    if(g.extensions && g.extensions.communists){ const powers=g.commPowers||[]; for(let i=0;i<(g.commTarget||6);i++){const pw=powers[i]||null;const label=pw?t('pw_'+pw):i===(g.commTarget||6)-1?t('winSlot'):'';comm+=`<div class="slot ${i===(g.commTarget||6)-1?'win':''}" style="--bgc:var(--green, #47765b)">${i<g.comm?tile(g.anarch>0&&i>=g.comm-g.anarch?'A':'C'):`<span>${label}</span>`}</div>`;} }
-    let pips=''; for(let i=1;i<=3;i++)pips+=`<span class="pip ${i<=g.tracker?'on':''} ${i===3?'last':''}">${i===3?'!':i}</span>`;
-    return `<div class="tracks"><div class="track lib"><div class="track-head"><h3>${t('libTrack')}</h3><span>${g.lib} / ${libTarget}</span></div><div class="slots" style="--track-length:${libTarget}">${lib}</div></div><div class="track fas"><div class="track-head"><h3>${t('fasTrack')}</h3><span>${g.fas} / 6</span></div><div class="slots">${fas}</div>${g.fas>=3?`<span class="hz-note">⚠ ${t('hitlerZone')}</span>`:''}${g.vetoUnlocked?`<span class="hz-note">${t('vetoUnlocked')}</span>`:''}</div>${g.extensions&&g.extensions.communists?`<div class="track comm"><div class="track-head"><h3>${t('commTrack')}</h3><span>${g.comm} / ${g.commTarget}</span></div><div class="slots" style="--track-length:${g.commTarget||6}">${comm}</div></div>`:''}<div class="tracker-row"><div class="tracker">${t('electionTracker')} ${pips} <span class="type" style="text-transform:none;letter-spacing:0">→ ${t('chaos')}</span></div><div class="piles"><span class="pile"><span class="mini"></span>${t('drawPile')}: ${g.deckCount}</span><span class="pile"><span class="mini" style="opacity:.5"></span>${t('discardPile')}: ${g.discardCount}</span></div></div></div>`;
-  }
+    for (let i = 0; i < 6; i++) {
+      const pw = g.powers[i];
+      const label = pw ? t('pw_' + pw) : i === 5 ? t('winSlot') : '';
+      const icon = pw ? ICON[pw] : i === 5 ? ICON.skull : '';
+      fas += `<div class="slot ${i >= 3 ? 'danger' : ''} ${i === 5 ? 'win' : ''}" style="--bgc:var(--orange)">${i < g.fas ? tile('F') : `${icon}<span>${label}${i === 4 ? '<br>+ veto' : ''}</span>`}</div>`;
+    }
+    
+    let komHtml = '';
+    if (g.subMode === 'expansion') {
+      let kom = '';
+      for (let i = 0; i < 5; i++) {
+        kom += `<div class="slot ${i === 4 ? 'win' : ''}" style="--bgc:var(--blue2)">${i < g.kom ? tile('K') : i === 4 ? ICON.special + `<span>${t('winSlot')}</span>` : ''}</div>`;
+      }
+      komHtml = `<div class="track kom"><div class="track-head"><h3>${t('komTrack')}</h3><span>${g.kom} / 5</span></div><div class="slots" style="grid-template-columns:repeat(5,1fr)">${kom}</div></div>`;
+    }
 
+    let pips = '';
+    for (let i = 1; i <= 3; i++) pips += `<span class="pip ${i <= g.tracker ? 'on' : ''} ${i === 3 ? 'last' : ''}">${i === 3 ? '!' : i}</span>`;
+    return `<div class="tracks">
+      <div class="track lib"><div class="track-head"><h3>${t('libTrack')}</h3><span>${g.lib} / 5</span></div><div class="slots">${lib}</div></div>
+      ${komHtml}
+      <div class="track fas"><div class="track-head"><h3>${t('fasTrack')}</h3><span>${g.fas} / 6</span></div><div class="slots">${fas}</div>
+        ${g.fas >= 3 ? `<span class="hz-note">⚠ ${t('hitlerZone')}</span> ` : ''}</div>
+      <div class="tracker-row"><div class="tracker">${t('electionTracker')} ${pips} <span class="type" style="text-transform:none">→ ${t('chaos')}</span></div>
+        <div class="piles"><span class="pile">${t('drawPile')}: ${g.deckCount}</span><span class="pile">${t('discardPile')}: ${g.discardCount}</span></div></div>
+    </div>`;
+  }
+  
   function seats() {
     const g = V.game; const ended = g.phase === 'ended'; const ac = aliveCount();
     return `<div class="seats">${V.players.map((p) => {
       const b = [];
       if (g.president === p.id) b.push(`<span class="badge P">${t('president')}</span>`);
       else if (g.presidentId === p.id && !ended) b.push(`<span class="badge P cand">${t('president')}?</span>`);
-      if (p.publicRole === 'dictator') b.push(`<span class="badge kH">${t('dictator')}</span>`);
       if (g.chancellor === p.id) b.push(`<span class="badge C">${t('chancellor')}</span>`);
       else if (g.nominee === p.id) b.push(`<span class="badge C cand">${t('chancellor')}?</span>`);
-      if (!ended && (g.phase === 'nominate') && p.alive && p.id !== g.presidentId && (p.id === g.lastChanc || (ac > 5 && p.id === g.lastPres))) b.push(`<span class="badge">${t('termLimited')}</span>`);
+      if (!ended && g.phase === 'nominate' && p.alive && p.id !== g.presidentId && (p.id === g.lastChanc || (ac > 5 && p.id === g.lastPres))) b.push(`<span class="badge">${t('termLimited')}</span>`);
       if (g.notHitler.includes(p.id)) b.push(`<span class="badge nh">${t('notHitler')}</span>`);
       if (g.investigated.includes(p.id)) b.push(`<span class="badge">${t('investigatedMark')}</span>`);
-      if (p.publicRole) b.push(`<span class="badge kF">${t(p.publicRole)}</span>`);
       if (!p.alive) b.push(`<span class="badge">☠ ${t('dead')}</span>`);
-      if (ended && g.roles) { const r = g.roles[p.id]; b.push(`<span class="badge ${r === 'liberal' ? 'nh' : r === 'hitler' ? 'kH' : 'kF'}">${t(r)}</span>`); }
+      if (ended && g.roles) { const r = g.roles[p.id]; b.push(`<span class="badge">${t(r) || r}</span>`); }
       const voted = g.phase === 'vote' && g.voted.includes(p.id);
-      const active = !ended && (p.id === g.presidentId || p.id === g.nominee || p.id === g.chancellor);
-      return `<div class="seat ${V.me && p.id === V.me.id ? 'me' : ''} ${p.alive ? '' : 'dead'} ${active ? 'active' : ''}">
-        ${p.online ? '' : `<span class="dot off off" title="${t('offline')}"></span>`}${voted ? '<span class="voted">✓</span>' : ''}
+      return `<div class="seat ${V.me && p.id === V.me.id ? 'me' : ''} ${p.alive ? '' : 'dead'}">
+        ${p.online ? '' : `<span class="dot off"></span>`}${voted ? '<span class="voted">✓</span>' : ''}
         <span class="nm">${esc(p.name)}</span><span class="badges">${b.join('')}</span></div>`;
     }).join('')}</div>`;
   }
+
   function histItem(h) {
     const r = `<span class="r">${t('round', { n: h.round })}</span>`;
     switch (h.type) {
       case 'election':
-        return `<li class="${h.passed ? '' : 'fail'}">${r}${t('h_election', { p: nm(h.president), c: nm(h.chancellor) })} — <b>${t(h.passed ? 'h_passed' : 'h_failed')}</b> (${h.ja}:${h.nein})
-          <div class="votes">${Object.entries(h.votes).map(([id, y]) => `<span class="${y ? 'y' : 'n'}">${nm(id)} ${t(y ? 'ja' : 'nein')}</span>`).join('')}</div></li>`;
-      case 'policy': {
-        const cl = [];
-        if (h.presClaim) cl.push(`${nm(h.president)} ${t('h_claims')} ${claimHtml(h.presClaim)}`);
-        if (h.chancClaim) cl.push(`${nm(h.chancellor)} ${t('h_claims')} ${claimHtml(h.chancClaim)}`);
-        const key={L:'enactedL',F:'enactedF',C:'enactedC',A:'enactedA',AC:'enactedAC',AF:'enactedAF',SD:'enactedSD'}[h.card]||'enactedF';
-        return `<li class="${h.card}">${r}<b>${t(h.chaos ? 'chaosEnacted' : key)}</b>${h.chaos ? ` — ${t(({L:'policyL',F:'policyF',C:'policyC',A:'policyA',AC:'policyAC',AF:'policyAF',SD:'policySD'})[h.card]||'policyF')}` : ''}${cl.length ? `<div class="claims">${cl.join(' · ')}</div>` : ''}</li>`;
-      }
-      case 'veto': return `<li class="fail">${r}${t('vetoed')} (${nm(h.president)} + ${nm(h.chancellor)})</li>`;
+        return `<li class="${h.passed ? '' : 'fail'}">${r}${t('h_election', { p: nm(h.president), c: nm(h.chancellor) })} — <b>${t(h.passed ? 'h_passed' : 'h_failed')}</b> (${h.ja}:${h.nein})</li>`;
+      case 'policy':
+        return `<li class="${h.card}">${r}<b>${t(h.chaos ? 'chaosEnacted' : 'enacted' + h.card)}</b></li>`;
+      case 'veto': return `<li class="fail">${r}${t('vetoed')}</li>`;
       case 'investigate': return `<li>${r}${t('investigatedEv', { p: nm(h.president), t: nm(h.target) })}</li>`;
-      case 'peek': return `<li>${r}${t('peekEv', { p: nm(h.president) })}</li>`;
-      case 'special': return `<li>${r}${t('specialEv', { p: nm(h.president), t: nm(h.target) })}</li>`;
       case 'execute': return `<li class="ex">${r}${t('executed', { name: nm(h.target) })}</li>`;
+      default: return '';
     }
-    return '';
   }
   function historyList() {
     const h = V.game.history;
@@ -383,24 +338,14 @@
     return chatLog() + (canTalk ? `<form class="chat-form" id="chatForm"><input id="chatIn" maxlength="300" autocomplete="off" placeholder="${t('chatPh')}"><button class="btn small">${t('send')}</button></form>` : '');
   }
 
-  // ---------- action panel ----------
   function actionPanel() {
     const g = V.game, pr = V.private, me = V.me && pl(V.me.id);
-    if (!me) return '';
-    if (g.phase === 'predeal') return predealPanel();
-    if (!pr) return '';
+    if (!pr || !me) return '';
     if (!me.alive) return `<div class="panel action"><p class="sub" style="margin:0">☠ ${t('deadInfo')}</p></div>`;
     const isP = me.id === g.presidentId;
     let mine = false, h = '';
     const wait = (id) => `<p class="sub">${t('waitFor', { p: nm(id) })}</p>`;
     switch (g.phase) {
-      case 'predeal': {
-        const labels = V.settings.extensionLabels || {};
-        const active = Object.entries(g.extensions || {}).filter(([,on]) => on).map(([k]) => t('ext_'+k));
-        mine = V.isHost;
-        h = `<h2>Přehled před rozdáním</h2><p class="sub">Hráči: ${g.playerCount}. Aktivní rozšíření: ${active.length ? active.map(esc).join(', ') : 'žádná'}.</p><p class="sub">Rozdělení: ${Object.entries(g.roleCounts || {}).filter(([,n]) => n).map(([k,n]) => `${esc(k)}: ${n}`).join(' · ')}</p>${V.isHost ? '<button class="btn block dark" data-act="deal">Potvrdit a rozdat role</button>' : '<p class="sub">Čeká se na hostitele.</p>'}`;
-        break;
-      }
       case 'roles': {
         const ready = g.ready.includes(me.id); mine = !ready;
         h = `<h2>${t('secretRole')}</h2><p class="sub">${t('tapReveal')}</p>
@@ -418,8 +363,7 @@
       case 'vote': {
         const mv = pr.myVote; mine = mv === null;
         h = `<h2>${t('voteOn')}</h2><p class="sub">${t('president')}: <b>${nm(g.presidentId)}</b> · ${t('chancellor')}: <b>${nm(g.nominee)}</b><br>${mv === null ? t('discuss') : t('youVoted', { v: t(mv ? 'ja' : 'nein') })}</p>
-          <div class="ballots"><button class="ballot ja ${mv === true ? 'sel' : mv === false ? 'dim' : ''}" data-vote="1">${t('ja')}</button><button class="ballot nein ${mv === false ? 'sel' : mv === true ? 'dim' : ''}" data-vote="0">${t('nein')}</button></div>
-          <p class="sub center" style="margin-top:12px">${t('votedCount', { v: g.voted.length, n: aliveCount() })}</p>`;
+          <div class="ballots"><button class="ballot ja ${mv === true ? 'sel' : ''}" data-vote="1">${t('ja')}</button><button class="ballot nein ${mv === false ? 'sel' : ''}" data-vote="0">${t('nein')}</button></div>`;
         break;
       }
       case 'legPres':
@@ -432,7 +376,7 @@
       case 'legChanc':
         if (me.id === g.chancellor && pr.hand) {
           mine = true;
-          h = `<h2>${t('enactOne')}</h2><p class="sub">${t('noTalk')}</p><div class="hand two">${pr.hand.map((c, i) => `<div data-sel="${i}">${tile(c, ui.sel === i ? 'sel' : '')}</div>`).join('')}</div>
+          h = `<h2>${t('enactOne')}</h2><p class="sub">${t('noTalk')}</p><div class="hand">${pr.hand.map((c, i) => `<div data-sel="${i}">${tile(c, ui.sel === i ? 'sel' : '')}</div>`).join('')}</div>
             <button class="btn block" data-act="enact" ${ui.sel === null ? 'disabled' : ''}>${t('enactIt')}</button>
             ${g.vetoUnlocked && !g.vetoRefused ? `<button class="btn block ghost" style="margin-top:12px" data-act="veto">${t('requestVeto')}</button>` : ''}`;
         } else h = `<h2>${t('chancellor')}: ${nm(g.chancellor)}</h2><p class="sub">${t('noTalk')}</p>`;
@@ -440,10 +384,9 @@
       case 'veto':
         if (me.id === g.president) {
           mine = true;
-          h = `<h2>${t('requestVeto')}</h2><p class="sub">${t('vetoAsk')}</p><div class="hand two">${(pr.hand || []).map((c) => `<div>${tile(c, 'static')}</div>`).join('')}</div>
+          h = `<h2>${t('requestVeto')}</h2><p class="sub">${t('vetoAsk')}</p>
             <div class="row"><button class="btn" data-veto="1">${t('vetoAgree')}</button><button class="btn ghost" data-veto="0">${t('vetoRefuse')}</button></div>`;
-        } else if (me.id === g.chancellor) h = `<p class="sub">${t('vetoWaiting')}</p>`;
-        else h = wait(g.president);
+        } else h = wait(g.president);
         break;
       case 'power':
         if (me.id === g.president) {
@@ -453,124 +396,63 @@
           } else {
             const key = { investigate: 'chooseInvestigate', special: 'chooseSpecial', execute: 'chooseExecute' }[g.power];
             const others = V.players.filter((p) => p.alive && p.id !== me.id);
-            h = `<h2>${t('pw_' + g.power)}</h2><p class="sub">${t(key)}</p><div class="choices">${others.map((p) => `<button class="choice" data-target="${p.id}" ${g.power === 'investigate' && g.investigated.includes(p.id) ? 'disabled' : ''}>${esc(p.name)}</button>`).join('')}</div>`;
+            h = `<h2>${t('pw_' + g.power)}</h2><p class="sub">${t(key)}</p><div class="choices">${others.map((p) => `<button class="choice" data-target="${p.id}">${esc(p.name)}</button>`).join('')}</div>`;
           }
         } else h = `<h2>${t('pw_' + g.power)}</h2>${wait(g.president)}`;
         break;
-      case 'commPower': case 'antiPower': {
-        const isActor=me.id===g.president; const key=g.power;
-        const labels={bugging:'chooseBugging',radicalisation:'chooseRadicalisation'};
-        if(!isActor) h=wait(g.president);
-        else if(key==='socialDemocratic') { mine=true; const hasF=g.fas>0, hasC=g.comm>0; h=`<h2>${t('pw_'+key)}</h2><p class="sub">${t('chooseSocialDemocratic')}</p><div class="choices">${hasF?`<button class="choice" data-track="fascist">${t('fasTrack')}</button>`:''}${hasC?`<button class="choice" data-track="communist">${t('commTrack')}</button>`:''}${!hasF&&!hasC?`<button class="choice" data-track="none">${t('done')}</button>`:''}</div>`; }
-        else if(labels[key]) { mine=true; const ids=key==='radicalisation'?(g.radicalisationTargets||[]):V.players.filter(p=>p.alive&&p.id!==me.id).map(p=>p.id); const others=ids.map(id=>pl(id)).filter(Boolean); h=`<h2>${t('pw_'+key)}</h2><p class="sub">${t(labels[key])}</p><div class="choices">${others.map(p=>`<button class="choice" data-target="${p.id}">${esc(p.name)}</button>`).join('')}${!others.length&&key==='radicalisation'?`<button class="choice" data-act="skipPower">${t('done')}</button>`:''}</div>`; }
-        else { mine=true; h=`<h2>${t('pw_'+key)}</h2><p class="sub">${t('powerDescription_'+key)}</p><button class="btn block dark" data-act="commPowerDone">${t('done')}</button>`; }
-        break;
-      }
-      case 'emergency': {
-        const e=g.currentEmergency; const actorId=e&&e.type==='article48'?g.president:g.chancellor; if(me.id!==actorId){h=wait(actorId);break;} mine=true;
-        const targetPowers=['impeachment','marked','execution','pardon'];
-        if(targetPowers.includes(e.power)){const targets=V.players.filter(p=>p.alive&&p.id!==me.id&&(e.power!=='pardon'||g.markedForExecution&&p.id===g.markedForExecution.id));h=`<h2>${t('emergency_'+e.power)}</h2><p class="sub">${t('emergencyDescription_'+e.power)}</p><div class="choices">${targets.map(p=>`<button class="choice" data-target="${p.id}">${esc(p.name)}</button>`).join('')}</div>`;}
-        else h=`<h2>${t('emergency_'+e.power)}</h2><p class="sub">${t('emergencyDescription_'+e.power)}</p><button class="btn block dark" data-act="useEmergency">${t('done')}</button>`;
-        break;
-      }
-      case 'emergencyPeek': {
-        if(me.id!==g.emergencyActor){h=wait(g.emergencyActor);break;} mine=true; const propaganda=g.currentEmergency&&g.currentEmergency.power==='propaganda'; h=`<h2>${t('emergencyPeek')}</h2><div class="hand">${(pr.peek||[]).map(c=>`<div>${tile(c,'static')}</div>`).join('')}</div>${propaganda?`<div class="row"><button class="btn dark" data-act="emergencyDiscard">Zahodit</button><button class="btn ghost" data-act="emergencyPeekDone">Ponechat</button></div>`:`<button class="btn block dark" data-act="emergencyPeekDone">${t('done')}</button>`}`;break;
-      }
-      case 'emergencyAck': if(me.id===g.emergencyActor){mine=true;h=`<h2>${t('emergencyImpeachmentResult')}</h2><p class="sub">${t('youCanLie')}</p><button class="btn block dark" data-act="emergencyAck">${t('done')}</button>`;}else h=wait(g.emergencyActor);break;
       case 'powerAck':
         if (me.id === g.president) {
           mine = true;
-          const r = pr.results[pr.results.length - 1];
-          const pk=r.party==='liberal'?'partyL':r.party==='communist'?'partyC':r.party==='anarchist'?'partyA':r.party==='capitalist'?'partyIndependent':'partyF';
-          h = `<h2>${t('pw_investigate')}</h2><p class="sub">${t('investigateResult', { name: nm(r.target) })}</p>
-            <div style="max-width:170px;margin:0 auto 14px"><div class="rcard ${r.party === 'liberal' ? 'partyL' : r.party==='communist'?'partyC':'partyF'}" style="--bgc:${r.party === 'liberal' ? 'var(--blue2)' : r.party==='communist'?'var(--green, #47765b)':'var(--red2)'}"><span class="k">${t('partyMembership')}</span><span class="v" style="font-size:18px">${t(pk)}</span></div></div>
-            <p class="sub center">${t('youCanLie')}</p><button class="btn block dark" data-act="powerAck">${t('done')}</button>`;
+          h = `<h2>${t('pw_investigate')}</h2><button class="btn block dark" data-act="powerAck">${t('done')}</button>`;
         } else h = wait(g.president);
         break;
     }
-    // optional claim of last government
-    const lg = g.lastGov; let claim = '';
-    if (lg && lg.histIdx != null) {
-      const hh = g.history[lg.histIdx];
-      const opts = me.id === lg.president && !hh.presClaim ? ['FFF', 'FFL', 'FLL', 'LLL'] : me.id === lg.chancellor && !hh.chancClaim ? ['FF', 'FL', 'LL'] : null;
-      if (opts && !mine) claim = `<div style="margin-top:14px"><div class="panel-title">${t(opts.length === 4 ? 'claimPres' : 'claimChanc')}</div><div class="claim-row">${opts.map((o) => `<button class="claim-btn" data-claim="${o}">${o.split('').map((c) => `<i class="${c}"></i>`).join('')}</button>`).join('')}</div></div>`;
-    }
-    return `<div class="panel action ${mine ? 'mine' : ''}">${mine ? `<span class="your-turn">${t('yourTurn')}</span>` : ''}${h}${claim}</div>`;
+    return `<div class="panel action ${mine ? 'mine' : ''}">${mine ? `<span class="your-turn">${t('yourTurn')}</span>` : ''}${h}</div>`;
   }
 
   function endBanner() {
     const g = V.game;
     const reason = g.reason === 'policies' ? 'r_policies_' + g.winner : 'r_' + g.reason;
-    const coalitionText = (g.winners || ['liberal','communist','anarchist']).map(w => t('side_' + w)).join(', ') + t('coalitionWinSuffix');
-    const title = (g.winner === 'coalition' || g.winner === 'communistAnarchist' || (g.winners||[]).length>1) ? coalitionText : t(g.winner === 'liberal' ? 'winLiberal' : g.winner === 'communist' ? 'winCommunist' : g.winner === 'anarchist' ? 'winAnarchist' : 'winFascist');
-    return `<div class="end-banner ${g.winner}"><div class="rays"></div>
-      <div style="width:90px;margin:0 auto 6px;--bgc:${g.winner === 'liberal' ? 'var(--blue)' : 'var(--red)'}">${g.winner === 'liberal' ? ICON.dove : ICON.skull}</div>
-      <h1>${title}</h1><p>${t(reason)}</p></div>
-      ${V.isHost ? `<button class="btn block dark" data-act="newGame">${t('newGame')}</button>` : `<p class="type muted center">${t('waitingNewGame')}</p>`}
-      <div class="panel-title" style="margin-top:6px">${t('rolesRevealed')}</div>`;
+    return `<div class="end-banner ${g.winner}">
+      <h1>${t('win' + g.winner.charAt(0).toUpperCase() + g.winner.slice(1))}</h1><p>${t(reason)}</p></div>
+      ${V.isHost ? `<button class="btn block dark" data-act="newGame">${t('newGame')}</button>` : `<p class="type muted center">${t('waitingNewGame')}</p>`}`;
   }
 
   function gameScreen() {
     const g = V.game; const ended = g.phase === 'ended';
     const head = ended ? endBanner() : statusBar();
-    if (V.isBoard) {
-      return `<div class="game"><div class="stack">${head}${g.phase === 'predeal' ? '' : tracks()}${g.phase === 'predeal' ? '' : seats()}${g.phase === 'predeal' ? predealPanel() : ''}</div>
-        <div class="side"><div class="panel"><div class="panel-title">${t('history')}</div>${historyList()}</div>
-        <div class="panel"><div class="panel-title">${t('chat')}</div>${chatLog()}</div></div></div>`;
-    }
-    const roleBtn = !ended && g.phase !== 'roles' && g.phase !== 'predeal' ? `<button class="btn dark small role-btn" data-act="role">${ICON.peek.replace('<svg', '<svg width="20"')} ${t('myRole')}</button>` : '';
-    if (V.mode === 'board') {
-      const actions = ended ? '' : (g.phase==='predeal' && !V.me ? predealPanel() : actionPanel());
-      return `<div class="game">${head}${ended ? seats() : ''}${roleBtn}${actions}
-        <div class="panel"><div class="panel-title">${t('chat')}</div>${chatBox()}</div></div>`;
-    }
-    const tabs = `<div><div class="tabs"><button data-tab="history" class="${ui.tab === 'history' ? 'on' : ''}">${t('history')}</button><button data-tab="chat" class="${ui.tab === 'chat' ? 'on' : ''}">${t('chat')}${ui.unread ? `<span class="cnt">${ui.unread}</span>` : ''}</button></div>
-      <div class="tab-body">${ui.tab === 'history' ? historyList() : chatBox()}</div></div>`;
-    return `<div class="game">${head}${ended ? '' : actionPanel()}${roleBtn}${g.phase === 'predeal' ? '' : ended ? seats() : ''}${g.phase === 'predeal' ? '' : tracks()}${g.phase === 'predeal' || ended ? '' : seats()}${tabs}</div>`;
+    const roleBtn = !ended && g.phase !== 'roles' ? `<button class="btn dark small role-btn" data-act="role">${t('myRole')}</button>` : '';
+    return `<div class="game">${head}${ended ? '' : actionPanel()}${roleBtn}${ended ? seats() : ''}${tracks()}${ended ? '' : seats()}
+      <div class="panel"><div class="panel-title">${t('chat')}</div>${chatBox()}</div></div>`;
   }
 
-  // ---------- render ----------
   function render() {
     document.documentElement.lang = lang;
     document.querySelectorAll('.lang button').forEach((b) => b.classList.toggle('on', b.dataset.lang === lang));
     const chip = $('#codeChip'); chip.hidden = !(V && session); if (V) chip.textContent = V.code;
     const ex = $('#exitBtn'); ex.hidden = !session; ex.textContent = t('exit');
-    $('#conn').textContent = t('reconnecting');
-    // preserve inputs
-    const active = document.activeElement && document.activeElement.id;
-    const keep = {}; main.querySelectorAll('input[id]').forEach((i) => { keep[i.id] = [i.value, i.selectionStart, i.selectionEnd]; });
-    const chatEl = $('#chatLog'); const nearBottom = !chatEl || chatEl.scrollHeight - chatEl.scrollTop - chatEl.clientHeight < 60;
-
+    
     let html; let cls = '';
     if (screen === 'room') {
       if (!V) html = `<p class="type center" style="margin-top:40px">${t('reconnecting')}</p>`;
-      else if (V.status === 'lobby') { html = lobbyScreen(); if (V.isBoard) cls = 'wide board-screen'; }
-      else { html = gameScreen(); if (V.isBoard) cls = 'wide board-screen'; }
+      else if (V.status === 'lobby') html = lobbyScreen();
+      else html = gameScreen();
     } else if (screen === 'create') html = createScreen();
     else if (screen === 'join') html = joinScreen();
     else html = homeScreen();
     main.className = cls;
     main.innerHTML = html;
-
-    Object.entries(keep).forEach(([id, [v, s, e]]) => { const i = document.getElementById(id); if (i) { i.value = v; if (id === active) { i.focus(); try { i.setSelectionRange(s, e); } catch { /* */ } } } });
-    const cl = $('#chatLog'); if (cl && nearBottom) cl.scrollTop = cl.scrollHeight;
-    if (ui.tab === 'chat' || (V && (V.isBoard || V.mode === 'board'))) ui.unread = 0;
     renderModal();
   }
 
-  // ---------- events ----------
   document.querySelector('.lang').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;
     lang = b.dataset.lang; localStorage.setItem('sh_lang', lang); render();
   });
   $('#exitBtn').addEventListener('click', async () => {
     if (!session) return;
-    const lobby = !V || V.status === 'lobby';
-    const hostBoard = V && V.isBoard && V.isHost;
-    const msg = hostBoard ? t('confirmCloseRoom') : lobby ? t('confirmLeave') : t('confirmExitGame');
-    if (!confirm(msg)) return;
-    if (V && hostBoard) await act('closeRoom');
-    else if (V && lobby && V.me) await act('leave');
+    if (!confirm(t('confirmLeave'))) return;
+    if (V && V.status === 'lobby' && V.me) await act('leave');
     endSession();
   });
   $('#brand').addEventListener('click', (e) => { e.preventDefault(); if (!session) { screen = 'home'; ui.error = ''; render(); } });
@@ -582,36 +464,20 @@
     }
   });
   main.addEventListener('input', (e) => { if (e.target.id === 'codeIn') { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ''); ui.joinCode = e.target.value; } });
-  main.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.target.id === 'nameIn' || e.target.id === 'codeIn')) { const b = main.querySelector('[data-act="create"],[data-act="join"]'); if (b) b.click(); }
-  });
-
-  main.addEventListener('change', (e) => {
-    const input = e.target.closest('input[data-ext]');
-    if (input) act('configureExtension', { key: input.dataset.ext, enabled: input.checked });
-  });
 
   main.addEventListener('click', async (e) => {
-    const el = e.target.closest('[data-go],[data-mode],[data-act],[data-kick],[data-ext],[data-nom],[data-vote],[data-sel],[data-veto],[data-target],[data-track],[data-claim],[data-tab]');
+    const el = e.target.closest('[data-go],[data-mode],[data-submode],[data-act],[data-kick],[data-nom],[data-vote],[data-sel],[data-veto],[data-target],[data-claim],[data-tab]');
     if (!el) return;
     const d = el.dataset;
     if (d.go) { screen = d.go; ui.error = ''; render(); return; }
     if (d.mode) { ui.mode = d.mode; render(); return; }
-    if (d.tab) { ui.tab = d.tab; if (d.tab === 'chat') ui.unread = 0; render(); return; }
+    if (d.submode) { ui.subMode = d.submode; render(); return; }
     if (d.kick) return act('kick', { target: d.kick });
     if (d.nom) return act('nominate', { target: d.nom });
     if (d.vote) return act('vote', { ja: d.vote === '1' });
     if (d.sel !== undefined) { ui.sel = ui.sel === +d.sel ? null : +d.sel; render(); return; }
     if (d.veto) return act('vetoAnswer', { agree: d.veto === '1' });
-    if (d.track) return act('socialDemocraticChoice', { track: d.track });
-    if (d.target) {
-      const g = V.game;
-      if (g.power === 'execute' && !confirm(t('chooseExecute') + ': ' + pl(d.target).name + '?')) return;
-      if (g.phase === 'commPower' || g.phase === 'antiPower') return act('commPower', { target: d.target });
-      if (g.phase === 'emergency') return act('emergency', { target: d.target });
-      return act('power', { target: d.target });
-    }
-    if (d.claim) return act('claim', { cards: d.claim });
+    if (d.target) return act('power', { target: d.target });
     switch (d.act) {
       case 'create': {
         const name = ($('#nameIn') || {}).value || '';
@@ -619,13 +485,13 @@
         ui.busy = true; render();
         try {
           if (name) localStorage.setItem('sh_name', name.trim());
-          const r = await post('/api/create', { mode: ui.mode, name });
+          const r = await post('/api/create', { mode: ui.mode, subMode: ui.subMode, name });
           saveSession({ code: r.code, token: r.token }); screen = 'room'; ui.error = ''; V = null; connect();
         } catch (err) { ui.error = errText(err); }
         ui.busy = false; render(); return;
       }
       case 'join': {
-        const code = ($('#codeIn').value || '').trim().toUpperCase(); const name = ($('#nameIn').value || '').trim();
+        const code = ($('#codeIn').value || '').trim().toUpperCase(); const name = ($('#nameIn') || '').trim();
         if (!name) { ui.error = t('e_nameRequired'); render(); return; }
         ui.busy = true; render();
         try {
@@ -638,10 +504,7 @@
       case 'copy':
         try { await navigator.clipboard.writeText(joinUrl()); toast(t('copied')); } catch { toast(joinUrl(), 5000); }
         return;
-      case 'saveRoles': { const counts = {};  ['liberal','fascist','hitler','communist','capitalist','anarchist','monarchist'].forEach(k => { const el = $('#role_' + k); if (el) counts[k] = +el.value; }); return act('configureRoles', { counts }); }
-      case 'resetRoles': return act('resetRoles');
       case 'start': return act('start');
-      case 'deal': return act('dealRoles');
       case 'leave': if (confirm(t('confirmLeave'))) { await act('leave'); endSession(); } return;
       case 'force': return act('forceContinue');
       case 'role': ui.roleOpen = true; ui.roleShown = false; renderModal(); return;
@@ -650,18 +513,10 @@
       case 'enact': if (ui.sel !== null) { const i = ui.sel; ui.sel = null; act('chancEnact', { index: i }); } return;
       case 'veto': return act('vetoRequest');
       case 'powerAck': return act('powerAck');
-      case 'commPowerDone': return act('commPower');
-      case 'skipPower': return act('skipPower');
-      case 'useEmergency': return act('emergency');
-      case 'emergencyPeekDone': return act('emergencyPeekChoice', { discard: false });
-      case 'emergencyDiscard': return act('emergencyPeekChoice', { discard: true });
-      case 'emergencyAck': return act('emergencyAck');
       case 'newGame': return act('newGame');
     }
   });
-  // board / host status bar buttons live inside main too (handled above)
 
-  // ---------- boot ----------
   const params = new URLSearchParams(location.search);
   const joinParam = (params.get('join') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
   if (joinParam) history.replaceState(null, '', '/');
