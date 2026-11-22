@@ -226,3 +226,130 @@ function tally(room) {
     if (ch.role === 'hitler') return endGame(room, 'fascist', 'hitlerElected');
     if (!g.notHitler.includes(ch.id)) g.notHitler.push(ch.id);
   }
+  ensureDeck(g);
+  let drawCount = 3;
+  g.hand = g.deck.splice(0, drawCount);
+  g.lastGov = { president: g.president, chancellor: g.chancellor, histIdx: null };
+  g.phase = 'legPres';
+}
+
+function act(room, actor, a) {
+  const g = room.game;
+  const me = actor.player;
+  const host = actor.isHost;
+  const type = a.type;
+
+  if (type === 'chat') {
+    if (!me) fail('notAllowed');
+    if (room.status === 'playing' && !me.alive) fail('deadNoSpeak');
+    const text = String(a.text || '').replace(/[\u0000-\u0008\u000b-\u001f]/g, '').trim().slice(0, 300);
+    if (!text) return;
+    room.chat.push({ id: ++room.chatSeq, pid: me.id, text, t: Date.now() });
+    if (room.chat.length > 200) room.chat.shift();
+    return;
+  }
+  if (type === 'start') {
+    if (!host) fail('hostOnly');
+    if (room.status === 'playing') fail('gameRunning');
+    room.players.forEach(p => { p.alive = true; });
+    startGame(room); return;
+  }
+  if (type === 'kick') {
+    if (!host) fail('hostOnly');
+    if (room.status === 'playing') fail('gameRunning');
+    const t = P(room, a.target); if (!t || t.id === room.hostId) fail('badTarget');
+    room.players = room.players.filter(p => p !== t);
+    closeClients(room, t.token, 'kicked');
+    sysChat(room, 'sysKicked', { name: t.name });
+    return;
+  }
+  if (type === 'leave') {
+    if (!me) fail('notAllowed');
+    if (room.status === 'playing') fail('gameRunning');
+    room.players = room.players.filter(p => p !== me);
+    if (room.hostId === me.id) room.hostId = room.players[0] ? room.players[0].id : null;
+    closeClients(room, me.token, 'left');
+    sysChat(room, 'sysLeft', { name: me.name });
+    return;
+  }
+  if (type === 'closeRoom') {
+    if (!host) fail('hostOnly');
+    for (const tok of [...room.clients.keys()]) closeClients(room, tok, 'roomClosed');
+    rooms.delete(room.code);
+    return;
+  }
+  if (type === 'newGame') {
+    if (!host) fail('hostOnly');
+    if (room.status !== 'ended') fail('notAllowed');
+    room.status = 'lobby'; room.game = null;
+    room.players.forEach(p => { p.alive = true; p.role = null; p.party = null; });
+    return;
+  }
+
+  if (room.status !== 'playing' || !g) fail('notAllowed');
+
+  if (type === 'forceContinue') {
+    if (!host || g.phase !== 'roles') fail('notAllowed');
+    beginElection(room, true); return;
+  }
+  if (!me) fail('notAllowed');
+  if (!me.alive) fail('dead');
+  const isPres = me.id === g.presidentId;
+
+  switch (type) {
+    case 'ackRole': {
+      if (g.phase !== 'roles') fail('notAllowed');
+      g.ready[me.id] = true;
+      if (room.players.every(p => g.ready[p.id])) beginElection(room, true);
+      return;
+    }
+    case 'nominate': {
+      if (g.phase !== 'nominate' || !isPres) fail('notAllowed');
+      if (!eligibleChancellors(room).includes(a.target)) fail('ineligible');
+      g.nominee = a.target; g.votes = {}; g.phase = 'vote';
+      return;
+    }
+    case 'vote': {
+      if (g.phase !== 'vote') fail('notAllowed');
+      g.votes[me.id] = !!a.ja;
+      tally(room); return;
+    }
+    case 'presDiscard': {
+      if (g.phase !== 'legPres' || me.id !== g.president) fail('notAllowed');
+      const i = a.index | 0; if (i < 0 || i >= g.hand.length) fail('badTarget');
+      g.discard.push(g.hand.splice(i, 1)[0]);
+      g.phase = 'legChanc'; return;
+    }
+    case 'chancEnact': {
+      if (g.phase !== 'legChanc' || me.id !== g.chancellor) fail('notAllowed');
+      const i = a.index | 0; if (i < 0 || i >= g.hand.length) fail('badTarget');
+      const card = g.hand[i];
+      g.hand.splice(i, 1);
+      g.discard.push(...g.hand); 
+      g.hand = [];
+      enact(room, card, false);
+      if (room.status !== 'playing') return;
+      if (card === 'F') {
+        const pw = powerTrack(g.playerCount, g.subMode)[g.fas - 1];
+        if (pw) {
+          g.power = pw; g.phase = 'power';
+          if (pw === 'peek') g.peek = g.deck.slice(0, 3);
+          return;
+        }
+      }
+      beginElection(room); return;
+    }
+    case 'vetoRequest': {
+      if (g.phase !== 'legChanc' || me.id !== g.chancellor || g.fas < 5 || g.vetoRefused) fail('notAllowed');
+      g.phase = 'veto'; return;
+    }
+    case 'vetoAnswer': {
+      if (g.phase !== 'veto' || me.id !== g.president) fail('notAllowed');
+      if (a.agree) {
+        g.discard.push(...g.hand); g.hand = [];
+        g.history.push({ type: 'veto', round: g.round, president: g.president, chancellor: g.chancellor });
+        pushEvent(g, { type: 'veto' });
+        ensureDeck(g);
+        failedGovernment(room);
+      } else {
+        g.
