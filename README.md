@@ -45,8 +45,14 @@ Rooms are held in memory; a server restart clears active rooms. Do not use this 
 - Anti-Communist, Anti-Fascist and Social Democratic policies.
 - Article 48 and Enabling Act emergency powers.
 - Longer Liberal tracker for larger rooms.
-- The agreed home variant: secret Monarchist; Hitler's execution reveals the Monarchist as Dictator, adds one Liberal policy step and removes Rote Kapelle from the game; executing the Dictator gives the joint Liberal/Communist/Anarchist victory when those factions are present.
-- Rote Kapelle: created when an ordinary Fascist is converted while both Communists and Monarchist are enabled; knows ordinary Fascists but not the Monarchist; does not attend the next Congress; leaves the game after Hitler is executed.
+- **Agreed home variant:** the Monarchist is secretly aligned with the Fascists but is unknown even to Hitler and the other Fascists. The Monarchist is protected from Communist Radicalisation. If Hitler is assassinated while the Monarchist is alive, the Monarchist is revealed as the public Dictator, the game continues, Rote Kapelle leaves the game and the Liberal policy track advances by **two policies**. The Dictator cannot be Chancellor. If the Dictator is later assassinated, Liberals and Communists win together; the Anarchist also joins this victory if included.
+- **Rote Kapelle:** created when an ordinary Fascist is converted to Communist while both Communists and Monarchist are enabled; knows ordinary Fascists but not the Monarchist; ordinary Fascists do not know them; does not attend the next Communist Congress; leaves the game after Hitler is assassinated and the Monarchist becomes Dictator.
+
+## Source rules versus home variant
+
+The original XL PDF protects Hitler and the Capitalist from Communist Radicalisation but does not list the Monarchist as protected. The project's agreed home variant **additionally protects the Monarchist**. This is a deliberate home-rule decision, not a claim about the wording of the source PDF.
+
+The original XL Monarchist victory condition is distinct from the project's Dictator succession rule. In the source XL rules, the Monarchist wins if the Fascists win and Hitler has not been elected Chancellor after three Fascist policies. The online project's agreed home variant instead defines the Monarchist's secret identity and succession to Dictator after Hitler's assassination. On that succession, the Liberal policy track advances by two spaces.
 
 ## Testing
 
@@ -59,11 +65,10 @@ npm run simulate:xl:stress
 
 `npm test` runs deterministic rule/permission/privacy checks plus 1,280 extension-combination/player-count setup cases. `simulate:base` runs 1,000 random-agent base games. `simulate:xl` runs 1,400 random-agent games with all XL expansion switches enabled across 5–20 players. Some optional one-off roles are omitted at 5–6 players because there are not enough seats. `simulate:xl:stress` runs 10,000 such games across 5–20 players (625 per player count). The simulations are stress tests of the implemented rules, not proof of competitive balance: random agents do not play strategically and the 17–20 role ratios are experimental.
 
-## Important rule decisions still requiring confirmation
+## Rulebook
 
-Two details are not fully specified by the source PDF and are currently implemented as explicit working assumptions:
+The bilingual EN/CZ rules reference is provided as `Secret_Hitler_XL_Rules_EN-CZ.pdf`. It is an original summary/adaptation, not a reproduction of the original rulebook artwork. See the PDF for source links and licensing notes.
 
-1. Emergency power cards are drawn after the President discards a policy and before the Chancellor chooses between the remaining two cards. This timing is necessary for Vote of No Confidence to operate on the President's discarded card.
-2. The PDF's Radicalisation procedure explicitly protects Hitler and the Capitalist, but does not list the Monarchist. The implementation therefore allows the Monarchist to be converted: the player keeps the Monarchist role, changes party membership to Communist, and does not become Rote Kapelle. If the Monarchist later succeeds Hitler, the agreed Dictator succession changes the party back to Fascist. This is an explicit implementation interpretation, not a rule stated by the PDF.
+## License and attribution
 
-The original rule PDFs are in `docs/` for reference.
+Secret Hitler is licensed under CC BY-NC-SA 4.0. The XL expansion source also states CC BY-NC-SA 4.0. Preserve attribution, non-commercial use and share-alike terms when redistributing adaptations. This fan project is not an official product.
