@@ -352,4 +352,221 @@ function act(room, actor, a) {
         ensureDeck(g);
         failedGovernment(room);
       } else {
-        g.
+        g.vetoRefused = true; g.phase = 'legChanc';
+        pushEvent(g, { type: 'vetoRefused' });
+      }
+      return;
+    }
+    case 'power': {
+      if (g.phase !== 'power' || me.id !== g.president || g.power === 'peek') fail('notAllowed');
+      const t = P(room, a.target);
+      if (!t || !t.alive || t.id === me.id) fail('badTarget');
+      if (g.power === 'investigate') {
+        if (g.investigated.includes(t.id)) fail('alreadyInvestigated');
+        g.investigated.push(t.id);
+        const shownParty = t.party === 'dual' ? (a.partyChoice || 'liberal') : t.party;
+        (g.priv[me.id] = g.priv[me.id] || []).push({ type: 'investigate', target: t.id, party: shownParty, round: g.round });
+        g.history.push({ type: 'investigate', round: g.round, president: me.id, target: t.id });
+        pushEvent(g, { type: 'investigate', president: me.id, target: t.id });
+        g.phase = 'powerAck'; return;
+      }
+      if (g.power === 'special') {
+        g.history.push({ type: 'special', round: g.round, president: me.id, target: t.id });
+        pushEvent(g, { type: 'special', president: me.id, target: t.id });
+        g.specialNext = t.id; beginElection(room); return;
+      }
+      if (g.power === 'execute') {
+        t.alive = false;
+        g.history.push({ type: 'execute', round: g.round, president: me.id, target: t.id });
+        pushEvent(g, { type: 'execute', target: t.id });
+        if (t.role === 'hitler') {
+          if (g.subMode === 'expansion') {
+            g.lib++;
+            pushEvent(g, { type: 'policy', card: 'L', chaos: false });
+            if (g.lib >= 5) return endGame(room, 'liberal', 'policies');
+          }
+          return endGame(room, 'liberal', 'hitlerKilled');
+        }
+        beginElection(room); return;
+      }
+      fail('notAllowed');
+    }
+    case 'powerAck': {
+      if (me.id !== g.president) fail('notAllowed');
+      if (g.phase === 'power' && g.power === 'peek') {
+        g.history.push({ type: 'peek', round: g.round, president: me.id });
+        pushEvent(g, { type: 'peek', president: me.id });
+        beginElection(room); return;
+      }
+      if (g.phase === 'powerAck') { beginElection(room); return; }
+      fail('notAllowed');
+    }
+    case 'claim': {
+      const lg = g.lastGov; if (!lg || lg.histIdx == null) fail('notAllowed');
+      const h = g.history[lg.histIdx];
+      const c = String(a.cards || '').toUpperCase();
+      if (me.id === lg.president && !h.presClaim) h.presClaim = c;
+      else if (me.id === lg.chancellor && !h.chancClaim) h.chancClaim = c;
+      else fail('notAllowed');
+      return;
+    }
+  }
+  fail('unknownAction');
+}
+
+function view(room, tok) {
+  const w = who(room, tok);
+  const g = room.game;
+  const me = w && w.player;
+  const v = {
+    code: room.code, mode: room.mode, subMode: room.subMode, status: room.status, gameNo: room.gameNo,
+    isBoard: !!(w && w.board), isHost: !!(w && w.isHost), hostId: room.hostId,
+    me: me ? { id: me.id, name: me.name } : null,
+    players: room.players.map(p => ({ id: p.id, name: p.name, alive: p.alive, online: (room.clients.get(p.token) || new Set()).size > 0 })),
+    boardOnline: room.boardToken ? (room.clients.get(room.boardToken) || new Set()).size > 0 : null,
+    chat: room.chat.slice(-80)
+  };
+  if (!g) return v;
+  const ended = g.phase === 'ended';
+  v.game = {
+    phase: g.phase, playerCount: g.playerCount, subMode: g.subMode, powers: powerTrack(g.playerCount, g.subMode),
+    lib: g.lib, fas: g.fas, kom: g.kom || 0, an: g.an || 0, tracker: g.tracker, round: g.round,
+    deckCount: g.deck.length, discardCount: g.discard.length,
+    presidentId: g.presidentId, nominee: g.nominee, president: g.president, chancellor: g.chancellor,
+    lastPres: g.lastPres, lastChanc: g.lastChanc, voted: Object.keys(g.votes), power: g.power,
+    vetoUnlocked: g.fas >= 5, vetoRefused: g.vetoRefused, investigated: g.investigated,
+    notHitler: g.notHitler, ready: Object.keys(g.ready), history: g.history,
+    events: g.events, eventSeq: g.eventSeq, winner: g.winner, reason: g.reason,
+    eligible: g.phase === 'nominate' ? eligibleChancellors(room) : [],
+    lastGov: g.lastGov
+  };
+  if (ended) v.game.roles = Object.fromEntries(room.players.map(p => [p.id, p.role]));
+  if (me && !ended) {
+    const priv = { role: me.role, party: me.party, known: {}, myVote: g.phase === 'vote' && me.id in g.votes ? g.votes[me.id] : null, results: g.priv[me.id] || [] };
+    if (['fascist', 'hitler', 'grandma', 'smuggler'].includes(me.role)) {
+      room.players.forEach(p => { if (p.id !== me.id && ['fascist', 'hitler', 'grandma', 'smuggler'].includes(p.role)) priv.known[p.id] = p.role; });
+    }
+    if ((g.phase === 'legPres' && me.id === g.president) || ((g.phase === 'legChanc' || g.phase === 'veto') && (me.id === g.chancellor || me.id === g.president))) priv.hand = g.hand;
+    if (g.phase === 'power' && g.power === 'peek' && me.id === g.president) priv.peek = g.peek;
+    v.private = priv;
+  } else if (me && ended) {
+    v.private = { role: me.role, party: me.party, known: {}, results: g.priv[me.id] || [] };
+  }
+  return v;
+}
+
+function send(res, obj) { res.write('data: ' + JSON.stringify(obj) + '\n\n'); }
+function broadcast(room) {
+  room.lastActive = Date.now();
+  for (const [tok, set] of room.clients) {
+    if (!who(room, tok)) continue;
+    const v = view(room, tok);
+    for (const res of set) send(res, v);
+  }
+}
+function closeClients(room, tok, reason) {
+  const set = room.clients.get(tok);
+  if (set) for (const res of set) { send(res, { closed: reason }); res.end(); }
+  room.clients.delete(tok);
+}
+
+function json(res, status, obj) {
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+  res.end(JSON.stringify(obj));
+}
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let d = '';
+    req.on('data', c => { d += c; if (d.length > 8192) { reject(new GameError('tooLarge')); req.destroy(); } });
+    req.on('end', () => { try { resolve(d ? JSON.parse(d) : {}); } catch { reject(new GameError('badJson')); } });
+  });
+}
+function getRoom(code) {
+  const room = rooms.get(String(code || '').toUpperCase().trim());
+  if (!room) fail('noRoom');
+  return room;
+}
+
+async function api(req, res, url) {
+  const route = url.pathname;
+  if (req.method === 'POST' && route === '/api/create') {
+    const b = await readBody(req);
+    const mode = b.mode === 'board' ? 'board' : 'personal';
+    const subMode = b.subMode === 'expansion' ? 'expansion' : 'classic';
+    if (mode === 'personal') cleanName(b.name);
+    const room = createRoom(mode, subMode);
+    let tok;
+    if (mode === 'board') { room.boardToken = tok = token(); room.hostId = 'board'; }
+    else { const p = addPlayer(room, b.name); room.hostId = p.id; tok = p.token; }
+    return json(res, 200, { code: room.code, token: tok });
+  }
+  if (req.method === 'POST' && route === '/api/join') {
+    const b = await readBody(req);
+    const room = getRoom(b.code);
+    const p = addPlayer(room, b.name);
+    sysChat(room, 'sysJoined', { name: p.name });
+    broadcast(room);
+    return json(res, 200, { code: room.code, token: p.token });
+  }
+  if (req.method === 'GET' && route === '/api/check') {
+    const room = rooms.get(String(url.searchParams.get('code') || '').toUpperCase());
+    return json(res, 200, { ok: !!(room && who(room, url.searchParams.get('token'))) });
+  }
+  if (req.method === 'GET' && route === '/api/stream') {
+    const room = getRoom(url.searchParams.get('code'));
+    const tok = url.searchParams.get('token');
+    if (!who(room, tok)) fail('badToken');
+    res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
+    res.write('retry: 2000\n\n');
+    if (!room.clients.has(tok)) room.clients.set(tok, new Set());
+    const set = room.clients.get(tok);
+    const wasOffline = set.size === 0;
+    set.add(res);
+    if (wasOffline) broadcast(room); else send(res, view(room, tok));
+    req.on('close', () => {
+      set.delete(res);
+      if (set.size === 0) { room.clients.delete(tok); if (rooms.has(room.code)) broadcast(room); }
+    });
+    return;
+  }
+  if (req.method === 'POST' && route === '/api/action') {
+    const b = await readBody(req);
+    const room = getRoom(b.code);
+    const w = who(room, b.token);
+    if (!w) fail('badToken');
+    act(room, w, b.action || {});
+    broadcast(room);
+    return json(res, 200, { ok: true });
+  }
+  json(res, 404, { error: 'notFound' });
+}
+
+function serveStatic(req, res, url) {
+  let p = decodeURIComponent(url.pathname);
+  if (p === '/' || !path.extname(p)) p = '/index.html';
+  const file = path.normalize(path.join(PUBLIC, p));
+  if (!file.startsWith(PUBLIC)) { res.writeHead(403); return res.end(); }
+  fs.readFile(file, (err, data) => {
+    if (err) { res.writeHead(404); return res.end('Not found'); }
+    res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
+    res.end(data);
+  });
+}
+
+const server = http.createServer(async (req, res) => {
+  const url = new URL(req.url, 'http://x');
+  if (url.pathname.startsWith('/api/')) {
+    try { await api(req, res, url); }
+    catch (e) {
+      if (e instanceof GameError) json(res, 400, { error: e.message });
+      else { console.error(e); json(res, 500, { error: 'server' }); }
+    }
+    return;
+  }
+  serveStatic(req, res, url);
+});
+
+if (require.main === module) {
+  server.listen(PORT, () => console.log('Secret Hitler server on http://localhost:' + PORT));
+}
+module.exports = { server, rooms, act, view, startGame, beginElection, eligibleChancellors, powerTrack };
