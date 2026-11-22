@@ -480,7 +480,12 @@
       if (text) { act('chat', { text }); i.value = ''; }
     }
   });
-  main.addEventListener('input', (e) => { if (e.target.id === 'codeIn') { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ''); ui.joinCode = e.target.value; } });
+  main.addEventListener('input', (e) => { 
+    if (e.target.id === 'codeIn') { 
+      e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, ''); 
+      ui.joinCode = e.target.value; 
+    } 
+  });
 
   main.addEventListener('click', async (e) => {
     const el = e.target.closest('[data-go],[data-mode],[data-submode],[data-act],[data-kick],[data-nom],[data-vote],[data-sel],[data-veto],[data-target],[data-claim],[data-tab]');
@@ -508,8 +513,12 @@
         ui.busy = false; render(); return;
       }
       case 'join': {
-        const code = ($('#codeIn').value || '').trim().toUpperCase(); const name = ($('#nameIn') || '').trim();
+        const code = ($('#codeIn') ? $('#codeIn').value : ui.joinCode || '').trim().toUpperCase(); 
+        const name = ($('#nameIn') ? $('#nameIn').value : '').trim();
+        
+        if (!code || code.length < 4) { ui.error = 'Zadej platný 4místný kód hry.'; render(); return; }
         if (!name) { ui.error = t('e_nameRequired'); render(); return; }
+        
         ui.busy = true; render();
         try {
           localStorage.setItem('sh_name', name);
@@ -542,3 +551,4 @@
   else if (joinParam) { ui.joinCode = joinParam; screen = 'join'; }
   render();
 })();
+
